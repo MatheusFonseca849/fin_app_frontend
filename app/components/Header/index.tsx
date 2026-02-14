@@ -1,0 +1,73 @@
+'use client'
+
+import { AppBar, Avatar, Divider, IconButton, ListItemIcon, ListItemText, Toolbar, Typography, Menu, MenuItem } from "@mui/material";
+import PersonIcon from '@mui/icons-material/Person';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import CategoryIcon from '@mui/icons-material/Category';
+import RepeatIcon from '@mui/icons-material/Repeat';
+import SettingsIcon from '@mui/icons-material/Settings';
+import LogoutIcon from '@mui/icons-material/Logout';
+import MenuIcon from '@mui/icons-material/Menu';
+import { useState } from "react";
+import DrawerMenu from "@/app/components/DrawerMenu";
+
+const Header = () => {
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+    const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(event.currentTarget);
+    }
+
+    return (
+        <>
+            <AppBar position="static">
+                <Toolbar>
+                    <IconButton
+                        edge="start"
+                        color="inherit"
+                        aria-label="menu"
+                        onClick={() => setDrawerOpen(true)}
+                        sx={{ mr: 2 }}
+                    >
+                        <MenuIcon />
+                    </IconButton>
+                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                        Bem vindo(a)! Vamos cuidar das suas finanças?
+                    </Typography>
+                    <Avatar onClick={handleOpen}/>
+                    <Menu open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)} anchorEl={anchorEl}>
+                        <MenuItem>
+                            <ListItemIcon><PersonIcon /></ListItemIcon>
+                            <ListItemText>Perfil</ListItemText>
+                        </MenuItem>
+                        <MenuItem>
+                            <ListItemIcon><ReceiptLongIcon /></ListItemIcon>
+                            <ListItemText>Transações</ListItemText>
+                        </MenuItem>
+                        <MenuItem>
+                            <ListItemIcon><CategoryIcon /></ListItemIcon>
+                            <ListItemText>Categorias</ListItemText>
+                        </MenuItem>
+                        <MenuItem>
+                            <ListItemIcon><RepeatIcon /></ListItemIcon>
+                            <ListItemText>Transações Recorrentes</ListItemText>
+                        </MenuItem>
+                        <MenuItem>
+                            <ListItemIcon><SettingsIcon /></ListItemIcon>
+                            <ListItemText>Configurações</ListItemText>
+                        </MenuItem>
+                        <Divider />
+                        <MenuItem sx={{ color: 'error.main' }}>
+                            <ListItemIcon><LogoutIcon color="error" /></ListItemIcon>
+                            <ListItemText>Sair</ListItemText>
+                        </MenuItem>
+                    </Menu>
+                </Toolbar>
+            </AppBar>
+            <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        </>
+    )
+}
+
+export default Header
