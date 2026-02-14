@@ -21,7 +21,7 @@ const Header = () => {
 
     return (
         <>
-            <AppBar position="static">
+            <AppBar position="static" sx={{ backgroundColor: '#63885a' }}>
                 <Toolbar>
                     <IconButton
                         edge="start"
