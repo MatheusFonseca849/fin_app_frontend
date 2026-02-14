@@ -17,7 +17,7 @@ const FabMenu = () => {
 
     return (
         <>
-            <Fab color="primary" aria-label="add" onClick={handleOpen} sx={{ position: 'fixed', bottom: 16, right: 16, width: 80, height: 80 }}>
+            <Fab color="primary" aria-label="add" onClick={handleOpen} sx={{ position: 'fixed', bottom: 16, right: 16, width: 80, height: 80, backgroundColor: '#63885a', '&:hover': { backgroundColor: '#1fcf25' } }} >
                 <AddIcon fontSize="large" />
             </Fab>
             <Menu
