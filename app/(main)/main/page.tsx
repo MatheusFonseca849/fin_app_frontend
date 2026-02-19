@@ -56,7 +56,7 @@ const Dashboard = () => {
                                 <YAxis type="category" dataKey="name" width={100} />
                                 <Bar dataKey="value" name="value" />
                                 <Tooltip />
-                                <Legend />
+                                {/* <Legend /> */}
                             </BarChart>
                         </ResponsiveContainer>
                     </Card>
