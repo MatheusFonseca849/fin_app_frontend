@@ -1,6 +1,6 @@
 'use client'
 
-import { AppBar, Avatar, Divider, IconButton, ListItemIcon, ListItemText, Toolbar, Typography, Menu, MenuItem } from "@mui/material";
+import { AppBar, Avatar, Divider, IconButton, ListItemIcon, ListItemText, Toolbar, Typography, Menu, MenuItem, Box } from "@mui/material";
 import PersonIcon from '@mui/icons-material/Person';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -35,7 +35,12 @@ const Header = () => {
                     <Typography variant="h6" sx={{ flexGrow: 1 }}>
                         Bem vindo(a)! Vamos cuidar das suas finanças?
                     </Typography>
-                    <Avatar onClick={handleOpen}/>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                        <Typography variant="body2">
+                            matheusfonseca@gmail.com
+                        </Typography>
+                        <Avatar onClick={handleOpen}/>
+                    </Box>
                     <Menu open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)} anchorEl={anchorEl}>
                         <MenuItem>
                             <ListItemIcon><PersonIcon /></ListItemIcon>
