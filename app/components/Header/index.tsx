@@ -10,6 +10,8 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useState } from "react";
 import DrawerMenu from "@/app/components/DrawerMenu";
+import Link from "next/link";
+
 
 const Header = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -21,7 +23,7 @@ const Header = () => {
 
     return (
         <>
-            <AppBar position="static" sx={{ backgroundColor: '#63885a' }}>
+            <AppBar position="fixed" sx={{ backgroundColor: '#63885a', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                 <Toolbar>
                     <IconButton
                         edge="start"
@@ -42,23 +44,23 @@ const Header = () => {
                         <Avatar onClick={handleOpen}/>
                     </Box>
                     <Menu open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)} anchorEl={anchorEl}>
-                        <MenuItem>
+                        <MenuItem component={Link} href="/config/profile">
                             <ListItemIcon><PersonIcon /></ListItemIcon>
                             <ListItemText>Perfil</ListItemText>
                         </MenuItem>
-                        <MenuItem>
+                        <MenuItem component={Link} href="/config/transactions">
                             <ListItemIcon><ReceiptLongIcon /></ListItemIcon>
                             <ListItemText>Transações</ListItemText>
                         </MenuItem>
-                        <MenuItem>
+                        <MenuItem component={Link} href="/config/categories">
                             <ListItemIcon><CategoryIcon /></ListItemIcon>
                             <ListItemText>Categorias</ListItemText>
                         </MenuItem>
-                        <MenuItem>
+                        <MenuItem component={Link} href="/config/recurring">
                             <ListItemIcon><RepeatIcon /></ListItemIcon>
                             <ListItemText>Transações Recorrentes</ListItemText>
                         </MenuItem>
-                        <MenuItem>
+                        <MenuItem component={Link} href="/config/settings">
                             <ListItemIcon><SettingsIcon /></ListItemIcon>
                             <ListItemText>Configurações</ListItemText>
                         </MenuItem>
@@ -70,6 +72,7 @@ const Header = () => {
                     </Menu>
                 </Toolbar>
             </AppBar>
+            <Toolbar />
             <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         </>
     )

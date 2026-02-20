@@ -21,7 +21,7 @@ const Dashboard = () => {
                         <List>
                             {mockExpenses.slice(0, 4).map((expense) => (
                                 <ListItem key={expense.id}>
-                                    <TransactionCard description={expense.description} amount={expense.amount} category={expense.category} date={expense.date} />
+                                    <TransactionCard description={expense.description} amount={expense.amount} category={expense.category} date={expense.date} color={expense.color} />
                                 </ListItem>
                             ))}
                         </List>
