@@ -23,14 +23,14 @@ const Header = () => {
 
     return (
         <>
-            <AppBar position="fixed" sx={{ backgroundColor: '#63885a', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+            <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                 <Toolbar>
                     <IconButton
                         edge="start"
                         color="inherit"
                         aria-label="menu"
-                        onClick={() => setDrawerOpen(true)}
-                        sx={{ mr: 2 }}
+                        onClick={() => setDrawerOpen(!drawerOpen)}
+                        sx={{ mr: 2, color: 'background.default' }}
                     >
                         <MenuIcon />
                     </IconButton>
@@ -56,10 +56,10 @@ const Header = () => {
                             <ListItemIcon><CategoryIcon /></ListItemIcon>
                             <ListItemText>Categorias</ListItemText>
                         </MenuItem>
-                        <MenuItem component={Link} href="/config/recurring">
+                        {/* <MenuItem component={Link} href="/config/recurring">
                             <ListItemIcon><RepeatIcon /></ListItemIcon>
                             <ListItemText>Transações Recorrentes</ListItemText>
-                        </MenuItem>
+                        </MenuItem> */}
                         <MenuItem component={Link} href="/config/settings">
                             <ListItemIcon><SettingsIcon /></ListItemIcon>
                             <ListItemText>Configurações</ListItemText>

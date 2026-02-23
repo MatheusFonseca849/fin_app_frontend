@@ -9,7 +9,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 
 const drawerWidth = 240;
 
-const ConfigLayout = ({children}: {children: React.ReactNode}) => {
+const ConfigLayout = ({ children }: { children: React.ReactNode }) => {
     return (
         <div>
             <Header />
@@ -36,10 +36,10 @@ const ConfigLayout = ({children}: {children: React.ReactNode}) => {
                             <ListItemIcon><CategoryIcon /></ListItemIcon>
                             <Link href="/config/categories">Categorias</Link>
                         </ListItem>
-                        <ListItem>
+                        {/* <ListItem>
                             <ListItemIcon><RepeatIcon /></ListItemIcon>
                             <Link href="/config/recurring">Transações Recorrentes</Link>
-                        </ListItem>
+                        </ListItem> */}
                         <ListItem>
                             <ListItemIcon><SettingsIcon /></ListItemIcon>
                             <Link href="/config/settings">Configurações</Link>
