@@ -5,6 +5,7 @@ export interface Expense {
     category: string;
     date: string;
     color: string;
+    isPaid?: boolean;
 }
 
 export interface Income {
@@ -13,6 +14,7 @@ export interface Income {
     amount: number;
     source: string;
     date: string;
+    isPaid?: boolean;
 }
 
 export const mockExpenses: Expense[] = [

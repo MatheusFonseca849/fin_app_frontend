@@ -47,10 +47,7 @@ const Profile = () => {
                 <EditableField label="Nome" value={firstName} onChange={setFirstName} />
                 <EditableField label="Sobrenome" value={lastName} onChange={setLastName} />
                 <EditableField label="Email" value={email} onChange={setEmail} />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: 'fit-content' }}>
-                    <Typography variant="h6">Senha: </Typography>
-                    <Button variant="contained">Alterar Senha</Button>
-                </Box>
+                <Button variant="contained">Alterar Senha</Button>
             </Box>
             <Button variant="contained" sx={{ position: 'fixed', bottom: 40, right: 30, mt: 2, backgroundColor: 'error.main', '&:hover': { backgroundColor: 'error.dark' } }}>Deletar Conta</Button>
 

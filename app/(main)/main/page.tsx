@@ -19,7 +19,7 @@ const Dashboard = () => {
                     <Card variant="outlined" sx={{ padding: 2, m: 2 }}>
                         <Typography variant="h6">Próximas Despesas</Typography>
                         <List>
-                            {mockExpenses.slice(0, 4).map((expense) => (
+                            {mockExpenses.filter((e) => !e.isPaid).slice(0, 4).map((expense) => (
                                 <ListItem key={expense.id}>
                                     <TransactionCard description={expense.description} amount={expense.amount} category={expense.category} date={expense.date} color={expense.color} />
                                 </ListItem>

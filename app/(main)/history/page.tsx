@@ -20,8 +20,8 @@ const HistoryPage = () => {
     ]
 
     const rows = [
-        ...mockExpenses.map((e) => ({ id: e.id, date: e.date, description: e.description, amount: e.amount, type: 'Despesa' as const, category: e.category, isRecurrent: RECURRENT_DESCRIPTIONS.includes(e.description) })),
-        ...mockIncome.map((i) => ({ id: i.id, date: i.date, description: i.description, amount: i.amount, type: 'Receita' as const, category: i.source, isRecurrent: RECURRENT_DESCRIPTIONS.includes(i.description) })),
+        ...mockExpenses.map((e) => ({ id: e.id, date: e.date, description: e.description, amount: e.amount, type: 'Despesa' as const, category: e.category, isRecurrent: RECURRENT_DESCRIPTIONS.includes(e.description), isPaid: false })),
+        ...mockIncome.map((i) => ({ id: i.id, date: i.date, description: i.description, amount: i.amount, type: 'Receita' as const, category: i.source, isRecurrent: RECURRENT_DESCRIPTIONS.includes(i.description), isPaid: false })),
     ].sort((a, b) => b.date.localeCompare(a.date))
 
     return (

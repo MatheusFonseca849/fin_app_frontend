@@ -20,6 +20,7 @@ const TransactionsPage = () => {
             type: 'Despesa' as const,
             category: e.category,
             isRecurrent: RECURRENT_DESCRIPTIONS.includes(e.description),
+            isPaid: false,
         }))
 
         const incomes = mockIncome.map((i) => ({
@@ -30,6 +31,7 @@ const TransactionsPage = () => {
             type: 'Receita' as const,
             category: i.source,
             isRecurrent: RECURRENT_DESCRIPTIONS.includes(i.description),
+            isPaid: false,
         }))
 
         return [...expenses, ...incomes]

@@ -34,6 +34,7 @@ export interface TransactionRow {
     type: 'Despesa' | 'Receita'
     category: string
     isRecurrent: boolean
+    isPaid: boolean
 }
 
 interface TransactionsTableProps {
@@ -53,6 +54,7 @@ const TransactionsTable = ({ rows, onEdit, onDelete }: TransactionsTableProps) =
     const [typeFilter, setTypeFilter] = useState<'' | 'Despesa' | 'Receita'>('')
     const [categoryFilter, setCategoryFilter] = useState('')
     const [recurrentOnly, setRecurrentOnly] = useState(false)
+    const [paidFilter, setPaidFilter] = useState<'' | 'true' | 'false'>('')
 
     const categories = useMemo(
         () => Array.from(new Set(rows.map((r) => r.category).filter(Boolean))).sort(),
@@ -77,9 +79,13 @@ const TransactionsTable = ({ rows, onEdit, onDelete }: TransactionsTableProps) =
         if (recurrentOnly) {
             result = result.filter((r) => r.isRecurrent)
         }
+        if (paidFilter !== '') {
+            const isPaid = paidFilter === 'true'
+            result = result.filter((r) => r.isPaid === isPaid)
+        }
 
         return result.sort((a, b) => b.date.localeCompare(a.date))
-    }, [rows, startDate, endDate, typeFilter, categoryFilter, recurrentOnly])
+    }, [rows, startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter])
 
     const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage))
     const paginatedRows = filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
@@ -144,6 +150,18 @@ const TransactionsTable = ({ rows, onEdit, onDelete }: TransactionsTableProps) =
                     }
                     label="Recorrentes"
                 />
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>Pago</InputLabel>
+                    <Select
+                        value={paidFilter}
+                        label="Pago"
+                        onChange={(e) => { setPaidFilter(e.target.value as '' | 'true' | 'false'); handleFilterChange() }}
+                    >
+                        <MenuItem value="">Todos</MenuItem>
+                        <MenuItem value="true">Sim</MenuItem>
+                        <MenuItem value="false">Não</MenuItem>
+                    </Select>
+                </FormControl>
             </Box>
 
             {/* Table */}
@@ -157,13 +175,14 @@ const TransactionsTable = ({ rows, onEdit, onDelete }: TransactionsTableProps) =
                             <TableCell><Typography variant="subtitle2">Tipo</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Categoria</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Recorrente</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Pago</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Ações</Typography></TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {paginatedRows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center">
+                                <TableCell colSpan={8} align="center">
                                     <Typography variant="body2" sx={{ py: 4, color: 'text.secondary' }}>
                                         Nenhuma transação encontrada
                                     </Typography>
@@ -181,6 +200,7 @@ const TransactionsTable = ({ rows, onEdit, onDelete }: TransactionsTableProps) =
                                     <TableCell>{row.type}</TableCell>
                                     <TableCell>{row.category || '—'}</TableCell>
                                     <TableCell>{row.isRecurrent ? 'Sim' : 'Não'}</TableCell>
+                                    <TableCell>{row.isPaid ? 'Sim' : 'Não'}</TableCell>
                                     <TableCell>
                                         <Tooltip title="Editar">
                                             <IconButton size="small" onClick={() => onEdit?.(row)}>
