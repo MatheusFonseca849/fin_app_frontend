@@ -7,6 +7,8 @@ export interface TransactionFormData {
     value: string
     type: 'credito' | 'debito'
     category: string
+    date: string
+    isPaid: boolean
     isRecurrent: boolean
     billingDay: string
 }
@@ -16,14 +18,21 @@ export const initialTransactionFormData: TransactionFormData = {
     value: '',
     type: 'debito',
     category: '',
+    date: new Date().toISOString().split('T')[0],
+    isPaid: false,
     isRecurrent: false,
     billingDay: ''
+}
+
+interface CategoryOption {
+    _id: string
+    name: string
 }
 
 interface AddTransactionProps {
     formData: TransactionFormData
     setFormData: React.Dispatch<React.SetStateAction<TransactionFormData>>
-    categories: string[]
+    categories: CategoryOption[]
 }
 
 const AddTransaction = ({ formData, setFormData, categories }: AddTransactionProps) => {
@@ -44,6 +53,16 @@ const AddTransaction = ({ formData, setFormData, categories }: AddTransactionPro
                 <ToggleButton value="debito">Despesa</ToggleButton>
                 <ToggleButton value="credito">Receita</ToggleButton>
             </ToggleButtonGroup>
+
+            <TextField
+                label="Data"
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleChange('date', e.target.value)}
+                required
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+            />
 
             <TextField
                 label="Descrição"
@@ -82,10 +101,22 @@ const AddTransaction = ({ formData, setFormData, categories }: AddTransactionPro
                     onChange={(e) => handleChange('category', e.target.value)}
                 >
                     {categories.map((cat) => (
-                        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                        <MenuItem key={cat._id} value={cat._id}>{cat.name}</MenuItem>
                     ))}
                 </Select>
             </FormControl>
+
+            {formData.type === 'debito' && (
+                <FormControlLabel
+                    control={
+                        <Checkbox
+                            checked={formData.isPaid}
+                            onChange={(e) => handleChange('isPaid', e.target.checked)}
+                        />
+                    }
+                    label="Pago"
+                />
+            )}
 
             <FormControlLabel
                 control={

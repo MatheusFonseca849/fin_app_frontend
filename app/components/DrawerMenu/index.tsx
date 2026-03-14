@@ -6,7 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import HomeIcon from '@mui/icons-material/Home';
 import HistoryIcon from '@mui/icons-material/History';
 import CalendarIcon from '@mui/icons-material/CalendarViewMonth';
-import StatsIcon from '@mui/icons-material/BarChart';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 
 interface DrawerMenuProps {
     open: boolean;
@@ -29,6 +29,10 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
                             <ListItemText primary="Home" />
                         </ListItemButton>
                     </ListItem>
+                    <ListItem component={Link} href="/transactions">
+                        <ListItemIcon><ReceiptLongIcon /></ListItemIcon>
+                        <ListItemText>Transações</ListItemText>
+                    </ListItem>
                     <ListItem disablePadding>
                         <ListItemButton component={Link} href="/history">
                             <ListItemIcon><HistoryIcon /></ListItemIcon>
@@ -41,12 +45,12 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
                             <ListItemText primary="Calendário" />
                         </ListItemButton>
                     </ListItem>
-                    <ListItem disablePadding>
+                    {/* <ListItem disablePadding>
                         <ListItemButton component={Link} href="/stats">
                             <ListItemIcon><StatsIcon /></ListItemIcon>
                             <ListItemText primary="Estatísticas" />
                         </ListItemButton>
-                    </ListItem>
+                    </ListItem> */}
                 </List>
             </Box>
         </Drawer>
