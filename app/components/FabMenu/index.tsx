@@ -1,28 +1,14 @@
 'use client'
 
-import { Alert, Box, Button, CircularProgress, Divider, Fab, Menu, MenuItem, Modal, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Fab, Menu, MenuItem } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import ModalComponent from "../ModalComponent";
 import AddTransaction, { initialTransactionFormData, TransactionFormData } from "../AddTransactionModal";
 import AddCategory, { CategoryFormData, initialCategoryFormData } from "../AddCategoryModal";
+import CsvImportModal from "../CsvImportModal";
 import { transactionsApi, categoriesApi } from "@/lib/api";
-import type { ImportResult } from "@/lib/api";
 import { useAuth } from "@/lib/contexts/AuthContext";
-
-const importModalBoxSx = {
-    position: 'absolute' as const,
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: { xs: '90%', sm: 480 },
-    bgcolor: 'background.paper',
-    borderRadius: 2,
-    boxShadow: 24,
-    display: 'flex',
-    flexDirection: 'column',
-}
 
 const FabMenu = () => {
     const { user, patchUser, categories: allCategories, setCategories } = useAuth();
@@ -45,10 +31,6 @@ const FabMenu = () => {
     const [categoryFeedback, setCategoryFeedback] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
     const [importModalOpen, setImportModalOpen] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [isImporting, setIsImporting] = useState(false);
-    const [importFeedback, setImportFeedback] = useState<{ message: string; severity: 'success' | 'warning' | 'error' } | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -117,6 +99,7 @@ const FabMenu = () => {
                 name: categoryForm.name,
                 type: categoryForm.type,
                 color: categoryForm.color,
+                keywords: categoryForm.keywords,
             });
             setCategories(prev => [...prev, newCategory]);
             setCategoryModalOpen(false);
@@ -130,44 +113,8 @@ const FabMenu = () => {
 
     const handleOpenImportModal = () => {
         handleClose();
-        setSelectedFile(null);
-        setImportFeedback(null);
         setImportModalOpen(true);
     };
-
-    const handleCloseImportModal = useCallback(() => {
-        if (isImporting) return;
-        setImportModalOpen(false);
-        setSelectedFile(null);
-        setImportFeedback(null);
-    }, [isImporting]);
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) setSelectedFile(file);
-        e.target.value = '';
-    };
-
-    const handleImport = useCallback(async () => {
-        if (!selectedFile) return;
-        setIsImporting(true);
-        setImportFeedback(null);
-        try {
-            const result: ImportResult = await transactionsApi.importCSV(selectedFile);
-            const parts: string[] = [];
-            parts.push(`${result.createdCount} transações importadas`);
-            if (result.skippedCount > 0) parts.push(`${result.skippedCount} duplicadas ignoradas`);
-            if (result.errorCount > 0) parts.push(`${result.errorCount} com erro`);
-            const msg = parts.join(', ') + '.';
-            const severity = result.errorCount > 0 ? 'error' : result.skippedCount > 0 ? 'warning' : 'success';
-            setImportFeedback({ message: msg, severity });
-            setSelectedFile(null);
-        } catch {
-            setImportFeedback({ message: 'Erro ao importar arquivo.', severity: 'error' });
-        } finally {
-            setIsImporting(false);
-        }
-    }, [selectedFile]);
 
     return (
         <>
@@ -229,60 +176,10 @@ const FabMenu = () => {
                 confirmLabel={isSavingCategory ? 'Salvando...' : 'Salvar'}
             />
 
-            <Modal open={importModalOpen} onClose={handleCloseImportModal}>
-                <Box sx={importModalBoxSx}>
-                    <Box sx={{ px: 3, pt: 3, pb: 1 }}>
-                        <Typography variant="h6" fontWeight={600}>Importar Extrato</Typography>
-                    </Box>
-                    <Divider />
-                    <Box sx={{ px: 3, py: 2 }}>
-                        {importFeedback && (
-                            <Alert severity={importFeedback.severity} sx={{ mb: 2 }} onClose={() => setImportFeedback(null)}>
-                                {importFeedback.message}
-                            </Alert>
-                        )}
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <TextField
-                                value={selectedFile?.name || ''}
-                                placeholder="Nenhum arquivo selecionado"
-                                fullWidth
-                                size="small"
-                                slotProps={{ input: { readOnly: true } }}
-                            />
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".csv"
-                                style={{ display: 'none' }}
-                                onChange={handleFileSelect}
-                            />
-                            <Button
-                                variant="contained"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={isImporting}
-                                startIcon={<UploadFileIcon />}
-                                sx={{ whiteSpace: 'nowrap', fontSize: '0.82rem', textTransform: 'none', textAlign: 'center' }}
-                            >
-                                Selecionar
-                            </Button>
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                            Formato CSV: date, type, category, description, value
-                        </Typography>
-                    </Box>
-                    <Divider />
-                    <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ px: 3, py: 2 }}>
-                        <Button onClick={handleCloseImportModal} disabled={isImporting}>Cancelar</Button>
-                        <Button
-                            variant="contained"
-                            onClick={handleImport}
-                            disabled={!selectedFile || isImporting}
-                        >
-                            {isImporting ? <CircularProgress size={24} /> : 'Importar'}
-                        </Button>
-                    </Stack>
-                </Box>
-            </Modal>
+            <CsvImportModal
+                open={importModalOpen}
+                onClose={() => setImportModalOpen(false)}
+            />
         </>
     )
 }

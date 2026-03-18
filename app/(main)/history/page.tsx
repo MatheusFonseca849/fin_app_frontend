@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Card, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
+import { Box, Card, CircularProgress, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
 import { useMemo, useState, useEffect, useCallback } from "react"
 import { ComposedChart, Bar, Line, XAxis, YAxis, Legend, ResponsiveContainer, AreaChart, Area } from "recharts"
 import { Tooltip as RechartsTooltip } from "recharts";
@@ -32,6 +32,8 @@ const RANGE_MONTHS: Record<RangeKey, number | undefined> = {
 
 const HistoryPage = () => {
 
+    const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
+
     const [range, setRange] = useState<RangeKey>('6m');
 
     // Chart data from server-side aggregation
@@ -55,6 +57,7 @@ const HistoryPage = () => {
 
     const fetchTransactions = useCallback(async () => {
         try {
+            setIsLoadingTransactions(true);
             const res: TransactionsResponse = await transactionsApi.getAll({
                 page: tablePage + 1,
                 limit: tableRowsPerPage,
@@ -64,6 +67,8 @@ const HistoryPage = () => {
             setTableTotal(res.pagination.total);
         } catch (error) {
             console.error('Failed to fetch transactions:', error);
+        } finally {
+            setIsLoadingTransactions(false);
         }
     }, [tablePage, tableRowsPerPage]);
 
@@ -149,18 +154,26 @@ const HistoryPage = () => {
                 <Grid size={12} sx={{ p: 2 }} spacing={2}>
                     <Card sx={{ p: 2 }}>
                         <Typography variant="h4" sx={{ marginBottom: 2}}>Transações</Typography>
-                        <TransactionsTable
-                            transactions={transactions}
-                            onTransactionChange={fetchTransactions}
-                            serverPagination={{
-                                page: tablePage,
-                                pages: tableTotalPages,
-                                total: tableTotal,
-                                rowsPerPage: tableRowsPerPage,
-                                onPageChange: handleTablePageChange,
-                                onRowsPerPageChange: handleTableRowsPerPageChange,
-                            }}
-                        />
+                        {
+                        isLoadingTransactions ? (
+                            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300}}>
+                                <CircularProgress />
+                            </Box>
+                        ) : (
+                            <TransactionsTable
+                                transactions={transactions}
+                                onTransactionChange={fetchTransactions}
+                                serverPagination={{
+                                    page: tablePage,
+                                    pages: tableTotalPages,
+                                    total: tableTotal,
+                                    rowsPerPage: tableRowsPerPage,
+                                    onPageChange: handleTablePageChange,
+                                    onRowsPerPageChange: handleTableRowsPerPageChange,
+                                }}
+                            />
+                        )
+                        }
                     </Card>
                 </Grid>
             </Grid>

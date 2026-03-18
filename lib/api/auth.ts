@@ -36,6 +36,7 @@ export interface Category {
   name: string;
   type: 'credito' | 'debito';
   color: string;
+  keywords: string[];
 }
 
 export interface UserPreferences {

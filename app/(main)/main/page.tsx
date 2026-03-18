@@ -291,6 +291,10 @@ const Dashboard = () => {
                     </Card>
                     <Card variant="outlined" sx={{ padding: 2, m: 2 }}>
                         <Typography variant="h6">Próximas Despesas</Typography>
+                        {
+                            upcomingExpenses.length === 0 ? (
+                                <Typography sx={{textAlign: 'center', my: 2}}>Você não tem despesas nos próximos dias. Seu bolso pode respirar!</Typography>
+                            ) : (
                         <List>
                             {upcomingExpenses.map(tx => (
                                 <ListItem key={tx._id}>
@@ -308,6 +312,8 @@ const Dashboard = () => {
                                 </ListItem>
                             ))}
                         </List>
+                            )
+                        }
                     </Card>
                 </Grid>
                 <Grid size={4}>
