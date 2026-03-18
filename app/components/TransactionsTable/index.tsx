@@ -16,6 +16,7 @@ import {
     FormControlLabel,
     IconButton,
     InputLabel,
+    Menu,
     MenuItem,
     Select,
     Table,
@@ -25,6 +26,7 @@ import {
     TableHead,
     TableRow,
     TextField,
+    Link,
     Tooltip,
     Typography,
 } from '@mui/material'
@@ -34,7 +36,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import CheckIcon from '@mui/icons-material/Check'
 import { transactionsApi } from '@/lib/api'
-import type { Transaction } from '@/lib/api'
+import type { Transaction, BulkUpdateData } from '@/lib/api'
 import { useAuth } from '@/lib/contexts/AuthContext'
 import ModalComponent from '@/app/components/ModalComponent'
 import AddTransaction, { initialTransactionFormData, TransactionFormData } from '@/app/components/AddTransactionModal'
@@ -100,6 +102,33 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     const [payingTransaction, setPayingTransaction] = useState<Transaction | null>(null)
     const [isPayDialogOpen, setIsPayDialogOpen] = useState(false)
     const [isPaying, setIsPaying] = useState(false)
+
+    // Description expand state
+    const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set())
+
+    // Selection state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+    // Bulk actions menu
+    const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null)
+
+    // Bulk delete confirmation
+    const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+    // Bulk update modal
+    const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false)
+    const [bulkUpdateFields, setBulkUpdateFields] = useState<Record<string, boolean>>({})
+    const [bulkUpdateForm, setBulkUpdateForm] = useState({
+        description: '',
+        value: '',
+        type: '' as '' | 'credito' | 'debito',
+        category: '',
+        date: '',
+        isPaid: false,
+    })
+    const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+    const [isBulkUpdateConfirmOpen, setIsBulkUpdateConfirmOpen] = useState(false)
 
     const rows: DisplayRow[] = useMemo(() =>
         transactions.map(tx => ({
@@ -269,6 +298,103 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
             .map(c => ({ _id: c._id, name: c.name }))
     }, [allCategories, editForm.type])
 
+    // Bulk update category options (depends on selected type in bulk form)
+    const bulkUpdateCategories = useMemo(() => {
+        if (!bulkUpdateForm.type) return allCategories.map(c => ({ _id: c._id, name: c.name }))
+        return allCategories
+            .filter(c => c.type === bulkUpdateForm.type)
+            .map(c => ({ _id: c._id, name: c.name }))
+    }, [allCategories, bulkUpdateForm.type])
+
+    // --- Selection handlers ---
+    const toggleSelect = useCallback((id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }, [])
+
+    const toggleSelectAll = useCallback(() => {
+        const pageIds = paginatedRows.map(r => r.id)
+        setSelectedIds(prev => {
+            const allSelected = pageIds.every(id => prev.has(id))
+            const next = new Set(prev)
+            if (allSelected) {
+                pageIds.forEach(id => next.delete(id))
+            } else {
+                pageIds.forEach(id => next.add(id))
+            }
+            return next
+        })
+    }, [paginatedRows])
+
+    const hasSelection = selectedIds.size > 0
+    const allOnPageSelected = paginatedRows.length > 0 && paginatedRows.every(r => selectedIds.has(r.id))
+
+    // --- Bulk delete ---
+    const handleOpenBulkDelete = useCallback(() => {
+        setBulkMenuAnchor(null)
+        setIsBulkDeleteDialogOpen(true)
+    }, [])
+
+    const handleConfirmBulkDelete = useCallback(async () => {
+        setIsBulkDeleting(true)
+        try {
+            const { balance } = await transactionsApi.bulkDelete(Array.from(selectedIds))
+            setSelectedIds(new Set())
+            notifyChange(balance)
+            setIsBulkDeleteDialogOpen(false)
+        } catch (error) {
+            console.error('Failed to bulk delete:', error)
+        } finally {
+            setIsBulkDeleting(false)
+        }
+    }, [selectedIds, notifyChange])
+
+    // --- Bulk update ---
+    const handleOpenBulkUpdate = useCallback(() => {
+        setBulkMenuAnchor(null)
+        setBulkUpdateFields({})
+        setBulkUpdateForm({ description: '', value: '', type: '', category: '', date: '', isPaid: false })
+        setIsBulkUpdateModalOpen(true)
+    }, [])
+
+    const handleBulkUpdateProceed = useCallback(() => {
+        setIsBulkUpdateModalOpen(false)
+        setIsBulkUpdateConfirmOpen(true)
+    }, [])
+
+    const handleConfirmBulkUpdate = useCallback(async () => {
+        setIsBulkUpdating(true)
+        try {
+            const updates: BulkUpdateData = {}
+            if (bulkUpdateFields.description) updates.description = bulkUpdateForm.description
+            if (bulkUpdateFields.value) updates.value = parseFloat(bulkUpdateForm.value)
+            if (bulkUpdateFields.type) updates.type = bulkUpdateForm.type as 'credito' | 'debito'
+            if (bulkUpdateFields.category) updates.category = bulkUpdateForm.category
+            if (bulkUpdateFields.date) updates.date = bulkUpdateForm.date
+            if (bulkUpdateFields.isPaid) updates.isPaid = bulkUpdateForm.isPaid
+
+            const { balance } = await transactionsApi.bulkUpdate(Array.from(selectedIds), updates)
+            setSelectedIds(new Set())
+            notifyChange(balance)
+            setIsBulkUpdateConfirmOpen(false)
+        } catch (error) {
+            console.error('Failed to bulk update:', error)
+        } finally {
+            setIsBulkUpdating(false)
+        }
+    }, [selectedIds, bulkUpdateFields, bulkUpdateForm, notifyChange])
+
+    const handleCancelBulkUpdateConfirm = useCallback(() => {
+        setIsBulkUpdateConfirmOpen(false)
+        setIsBulkUpdateModalOpen(true)
+    }, [])
+
+    const hasEnabledBulkFields = Object.values(bulkUpdateFields).some(v => v)
+
     return (
         <>
         <Card sx={{ p: 2 }}>
@@ -338,6 +464,27 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                         <MenuItem value="false">Não</MenuItem>
                     </Select>
                 </FormControl>
+
+                {hasSelection && (
+                    <>
+                        <Box sx={{ flex: 1 }} />
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={(e) => setBulkMenuAnchor(e.currentTarget)}
+                        >
+                            Ações ({selectedIds.size})
+                        </Button>
+                        <Menu
+                            anchorEl={bulkMenuAnchor}
+                            open={Boolean(bulkMenuAnchor)}
+                            onClose={() => setBulkMenuAnchor(null)}
+                        >
+                            <MenuItem onClick={handleOpenBulkDelete}>Deletar todos</MenuItem>
+                            <MenuItem onClick={handleOpenBulkUpdate}>Atualização em massa</MenuItem>
+                        </Menu>
+                    </>
+                )}
             </Box>
 
             {/* Table */}
@@ -345,6 +492,14 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                 <Table stickyHeader>
                     <TableHead sx={{ '& .MuiTableCell-head': { backgroundColor: 'primary.main', color: 'white' } }}>
                         <TableRow>
+                            <TableCell padding="checkbox">
+                                <Checkbox
+                                    checked={allOnPageSelected}
+                                    indeterminate={hasSelection && !allOnPageSelected}
+                                    onChange={toggleSelectAll}
+                                    sx={{ color: 'white', '&.Mui-checked': { color: 'white' }, '&.MuiCheckbox-indeterminate': { color: 'white' } }}
+                                />
+                            </TableCell>
                             <TableCell><Typography variant="subtitle2">Data</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Descrição</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Valor</Typography></TableCell>
@@ -358,7 +513,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                     <TableBody>
                         {paginatedRows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">
+                                <TableCell colSpan={9} align="center">
                                     <Typography variant="body2" sx={{ py: 4, color: 'text.secondary' }}>
                                         Nenhuma transação encontrada
                                     </Typography>
@@ -366,9 +521,44 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                             </TableRow>
                         ) : (
                             paginatedRows.map((row) => (
-                                <TableRow key={row.id} hover>
+                                <TableRow key={row.id} hover selected={selectedIds.has(row.id)}>
+                                    <TableCell padding="checkbox">
+                                        <Checkbox
+                                            checked={selectedIds.has(row.id)}
+                                            onChange={() => toggleSelect(row.id)}
+                                            size="small"
+                                        />
+                                    </TableCell>
                                     <TableCell>{new Date(row.date + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
-                                    <TableCell>{row.description}</TableCell>
+                                    <TableCell sx={{ maxWidth: 350 }}>
+                                        {row.description.length <= 100 ? (
+                                            row.description
+                                        ) : expandedDescs.has(row.id) ? (
+                                            <>
+                                                {row.description}{' '}
+                                                <Link
+                                                    component="button"
+                                                    variant="body2"
+                                                    onClick={() => setExpandedDescs(prev => { const next = new Set(prev); next.delete(row.id); return next })}
+                                                    sx={{ verticalAlign: 'baseline', whiteSpace: 'nowrap' }}
+                                                >
+                                                    ver menos
+                                                </Link>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {row.description.slice(0, 100)}&hellip;{' '}
+                                                <Link
+                                                    component="button"
+                                                    variant="body2"
+                                                    onClick={() => setExpandedDescs(prev => new Set(prev).add(row.id))}
+                                                    sx={{ verticalAlign: 'baseline', whiteSpace: 'nowrap' }}
+                                                >
+                                                    ver mais
+                                                </Link>
+                                            </>
+                                        )}
+                                    </TableCell>
                                     <TableCell sx={{ color: row.type === 'Despesa' ? 'error.main' : 'success.main', fontWeight: 500 }}>
                                         {row.type === 'Despesa' ? '- ' : '+ '}
                                         R$ {row.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -482,6 +672,180 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                 <Button onClick={handleCloseDelete} disabled={isDeleting}>Cancelar</Button>
                 <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={isDeleting}>
                     {isDeleting ? <CircularProgress size={20} /> : 'Excluir'}
+                </Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Bulk Delete Confirmation */}
+        <Dialog open={isBulkDeleteDialogOpen} onClose={() => !isBulkDeleting && setIsBulkDeleteDialogOpen(false)}>
+            <DialogTitle>Excluir Transações</DialogTitle>
+            <DialogContent>
+                <DialogContentText>
+                    Essa operação não poderá ser desfeita. Tem certeza que deseja prosseguir?
+                </DialogContentText>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {selectedIds.size} transação(ões) serão excluídas.
+                </Typography>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setIsBulkDeleteDialogOpen(false)} disabled={isBulkDeleting}>Cancelar</Button>
+                <Button onClick={handleConfirmBulkDelete} color="error" variant="contained" disabled={isBulkDeleting}>
+                    {isBulkDeleting ? <CircularProgress size={20} /> : 'Excluir'}
+                </Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Bulk Update Modal */}
+        <Dialog
+            open={isBulkUpdateModalOpen}
+            onClose={() => setIsBulkUpdateModalOpen(false)}
+            maxWidth="sm"
+            fullWidth
+        >
+            <DialogTitle>Atualização em Massa</DialogTitle>
+            <DialogContent>
+                <DialogContentText sx={{ mb: 2 }}>
+                    Selecione os campos que deseja atualizar para as {selectedIds.size} transações selecionadas:
+                </DialogContentText>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {/* Description */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Checkbox
+                            checked={!!bulkUpdateFields.description}
+                            onChange={(e) => setBulkUpdateFields(prev => ({ ...prev, description: e.target.checked }))}
+                        />
+                        <TextField
+                            label="Descrição"
+                            size="small"
+                            fullWidth
+                            disabled={!bulkUpdateFields.description}
+                            value={bulkUpdateForm.description}
+                            onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, description: e.target.value }))}
+                        />
+                    </Box>
+
+                    {/* Value */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Checkbox
+                            checked={!!bulkUpdateFields.value}
+                            onChange={(e) => setBulkUpdateFields(prev => ({ ...prev, value: e.target.checked }))}
+                        />
+                        <TextField
+                            label="Valor"
+                            size="small"
+                            type="number"
+                            fullWidth
+                            disabled={!bulkUpdateFields.value}
+                            value={bulkUpdateForm.value}
+                            onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, value: e.target.value }))}
+                            inputProps={{ step: '0.01', min: '0.01' }}
+                        />
+                    </Box>
+
+                    {/* Type */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Checkbox
+                            checked={!!bulkUpdateFields.type}
+                            onChange={(e) => setBulkUpdateFields(prev => ({ ...prev, type: e.target.checked }))}
+                        />
+                        <FormControl size="small" fullWidth disabled={!bulkUpdateFields.type}>
+                            <InputLabel>Tipo</InputLabel>
+                            <Select
+                                value={bulkUpdateForm.type}
+                                label="Tipo"
+                                onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, type: e.target.value as '' | 'credito' | 'debito', category: '' }))}
+                            >
+                                <MenuItem value="debito">Despesa</MenuItem>
+                                <MenuItem value="credito">Receita</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {/* Category */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Checkbox
+                            checked={!!bulkUpdateFields.category}
+                            onChange={(e) => setBulkUpdateFields(prev => ({ ...prev, category: e.target.checked }))}
+                        />
+                        <FormControl size="small" fullWidth disabled={!bulkUpdateFields.category}>
+                            <InputLabel>Categoria</InputLabel>
+                            <Select
+                                value={bulkUpdateForm.category}
+                                label="Categoria"
+                                onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, category: e.target.value }))}
+                            >
+                                {bulkUpdateCategories.map(c => (
+                                    <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+
+                    {/* Date */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Checkbox
+                            checked={!!bulkUpdateFields.date}
+                            onChange={(e) => setBulkUpdateFields(prev => ({ ...prev, date: e.target.checked }))}
+                        />
+                        <TextField
+                            label="Data"
+                            type="date"
+                            size="small"
+                            fullWidth
+                            disabled={!bulkUpdateFields.date}
+                            value={bulkUpdateForm.date}
+                            onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, date: e.target.value }))}
+                            slotProps={{ inputLabel: { shrink: true } }}
+                        />
+                    </Box>
+
+                    {/* isPaid */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Checkbox
+                            checked={!!bulkUpdateFields.isPaid}
+                            onChange={(e) => setBulkUpdateFields(prev => ({ ...prev, isPaid: e.target.checked }))}
+                        />
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={bulkUpdateForm.isPaid}
+                                    onChange={(e) => setBulkUpdateForm(prev => ({ ...prev, isPaid: e.target.checked }))}
+                                    disabled={!bulkUpdateFields.isPaid}
+                                />
+                            }
+                            label="Marcar como pago"
+                        />
+                    </Box>
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setIsBulkUpdateModalOpen(false)}>Cancelar</Button>
+                <Button
+                    variant="contained"
+                    onClick={handleBulkUpdateProceed}
+                    disabled={!hasEnabledBulkFields}
+                >
+                    Prosseguir
+                </Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Bulk Update Confirmation */}
+        <Dialog open={isBulkUpdateConfirmOpen} onClose={() => !isBulkUpdating && handleCancelBulkUpdateConfirm()}>
+            <DialogTitle>Confirmar Atualização</DialogTitle>
+            <DialogContent>
+                <DialogContentText>
+                    Essa operação não poderá ser desfeita. Tem certeza que deseja prosseguir?
+                </DialogContentText>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {selectedIds.size} transação(ões) serão atualizadas.
+                </Typography>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleCancelBulkUpdateConfirm} disabled={isBulkUpdating}>Cancelar</Button>
+                <Button onClick={handleConfirmBulkUpdate} color="primary" variant="contained" disabled={isBulkUpdating}>
+                    {isBulkUpdating ? <CircularProgress size={20} /> : 'Confirmar'}
                 </Button>
             </DialogActions>
         </Dialog>

@@ -5,12 +5,14 @@ export interface CreateCategoryData {
   name: string;
   type: 'credito' | 'debito';
   color?: string;
+  keywords?: string[];
 }
 
 export interface UpdateCategoryData {
   name?: string;
   type?: 'credito' | 'debito';
   color?: string;
+  keywords?: string[];
 }
 
 export const categoriesApi = {

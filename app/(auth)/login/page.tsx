@@ -67,6 +67,11 @@ const Login = () => {
                             sx={{ minWidth: '100%' }}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            onKeyUp={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleSubmit();
+                                }
+                            }}
                         />
                         {isUnverified && (
                             <Button

@@ -49,6 +49,7 @@ const CategoriesPage = () => {
             name: cat.name,
             type: cat.type,
             color: cat.color || '#1976d2',
+            keywords: cat.keywords || [],
         })
         setIsModalOpen(true)
     }, [categories])
@@ -67,6 +68,7 @@ const CategoriesPage = () => {
                     name: formData.name,
                     type: formData.type,
                     color: formData.color,
+                    keywords: formData.keywords,
                 })
                 setCategories(prev => prev.map(c => c._id === editingCategory._id ? updated : c))
             } else {
@@ -74,6 +76,7 @@ const CategoriesPage = () => {
                     name: formData.name,
                     type: formData.type,
                     color: formData.color,
+                    keywords: formData.keywords,
                 })
                 setCategories(prev => [...prev, created])
             }

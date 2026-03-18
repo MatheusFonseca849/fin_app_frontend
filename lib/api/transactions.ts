@@ -81,6 +81,70 @@ export interface ImportResult {
   skippedCount: number;
   errorCount: number;
   errors: string[];
+  balance?: number;
+}
+
+export interface BankOption {
+  key: string;
+  label: string;
+}
+
+export interface ImportPreviewRow {
+  rowIndex: number;
+  description: string;
+  value: number;
+  valueCents: number;
+  type: 'credito' | 'debito';
+  categoryId: string;
+  categoryName: string;
+  date: string;
+  timestamp: string;
+  isPaid: boolean;
+}
+
+export interface ImportPreviewResponse {
+  rows: ImportPreviewRow[];
+  errors: string[];
+  headers: string[];
+}
+
+export interface ImportConfirmTransaction {
+  description: string;
+  value: number;
+  type: 'credito' | 'debito';
+  categoryId: string;
+  date: string;
+  isPaid: boolean;
+}
+
+export interface CustomMapping {
+  columns: {
+    date: string;
+    value: string;
+    description: string;
+  };
+  keywordTarget?: string;
+  dateFormat?: string;
+  valueSigned?: boolean;
+  separator?: string;
+}
+
+export interface BulkActionResult {
+  message: string;
+  deletedCount?: number;
+  updatedCount?: number;
+  balance: number;
+}
+
+export interface BulkUpdateData {
+  description?: string;
+  value?: number;
+  type?: 'credito' | 'debito';
+  category?: string;
+  date?: string;
+  isPaid?: boolean;
+  isRecurrent?: boolean;
+  billingDay?: number;
 }
 
 export const transactionsApi = {
@@ -125,12 +189,36 @@ export const transactionsApi = {
     return res.data;
   },
 
-  importCSV: async (file: File) => {
+  getBankOptions: async () => {
+    const res = await api.get<BankOption[]>('/records/import/banks');
+    return res.data;
+  },
+
+  importPreview: async (file: File, bankKey: string, customMapping?: CustomMapping) => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await api.post<ImportResult>('/records/import', formData, {
+    formData.append('bankKey', bankKey);
+    if (customMapping) {
+      formData.append('customMapping', JSON.stringify(customMapping));
+    }
+    const res = await api.post<ImportPreviewResponse>('/records/import/preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return res.data;
+  },
+
+  importConfirm: async (transactions: ImportConfirmTransaction[]) => {
+    const res = await api.post<ImportResult>('/records/import/confirm', { transactions });
+    return res.data;
+  },
+
+  bulkDelete: async (ids: string[]) => {
+    const res = await api.post<BulkActionResult>('/records/bulk-delete', { ids });
+    return res.data;
+  },
+
+  bulkUpdate: async (ids: string[], updates: BulkUpdateData) => {
+    const res = await api.post<BulkActionResult>('/records/bulk-update', { ids, updates });
     return res.data;
   },
 };

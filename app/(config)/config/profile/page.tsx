@@ -11,6 +11,20 @@ import { useAuth } from "@/lib/contexts/AuthContext"
 import { usersApi } from "@/lib/api"
 import { useUnsavedChanges } from "@/lib/hooks/useUnsavedChanges"
 
+const validateName = (value: string): string | null => {
+    const trimmed = value.trim()
+    if (trimmed.length < 2) return 'Deve ter no mínimo 2 caracteres'
+    if (trimmed.length > 100) return 'Deve ter no máximo 100 caracteres'
+    return null
+}
+
+const validateEmail = (value: string): string | null => {
+    const trimmed = value.trim()
+    if (!trimmed) return 'Email é obrigatório'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return 'Formato de email inválido'
+    return null
+}
+
 const Profile = () => {
     const { user, updateUser, uploadAvatar, logout } = useAuth();
     const router = useRouter();
@@ -68,8 +82,9 @@ const Profile = () => {
 
             await updateUser(updates);
             setFeedback({ message: 'Perfil atualizado com sucesso.', severity: 'success' });
-        } catch {
-            setFeedback({ message: 'Erro ao salvar alterações.', severity: 'error' });
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Erro ao salvar alterações.';
+            setFeedback({ message: msg, severity: 'error' });
         } finally {
             setIsSaving(false);
         }
@@ -121,8 +136,9 @@ const Profile = () => {
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
-        } catch {
-            setFeedback({ message: 'Senha atual incorreta ou erro ao alterar senha.', severity: 'error' });
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Senha atual incorreta ou erro ao alterar senha.';
+            setFeedback({ message: msg, severity: 'error' });
         } finally {
             setIsChangingPassword(false);
         }
@@ -199,9 +215,9 @@ const Profile = () => {
                     />
                 </Badge>
 
-                <EditableField label="Nome" value={firstName} onChange={setFirstName} />
-                <EditableField label="Sobrenome" value={lastName} onChange={setLastName} />
-                <EditableField label="Email" value={email} onChange={setEmail} />
+                <EditableField label="Nome" value={firstName} onChange={setFirstName} validate={validateName} />
+                <EditableField label="Sobrenome" value={lastName} onChange={setLastName} validate={validateName} />
+                <EditableField label="Email" value={email} onChange={setEmail} validate={validateEmail} />
                 <Button variant="contained" onClick={() => setPasswordModalOpen(true)}>Alterar Senha</Button>
             </Box>
 

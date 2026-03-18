@@ -10,24 +10,43 @@ interface EditableFieldProps {
     label: string
     value: string
     onChange: (value: string) => void
+    validate?: (value: string) => string | null
 }
 
-const EditableField = ({ label, value, onChange }: EditableFieldProps) => {
+const EditableField = ({ label, value, onChange, validate }: EditableFieldProps) => {
     const [isEditing, setIsEditing] = useState(false)
     const [draft, setDraft] = useState(value)
+    const [error, setError] = useState<string | null>(null)
 
     const handleEdit = () => {
         setDraft(value)
+        setError(null)
         setIsEditing(true)
     }
 
+    const handleDraftChange = (newValue: string) => {
+        setDraft(newValue)
+        if (validate) {
+            setError(validate(newValue))
+        }
+    }
+
     const handleConfirm = () => {
+        if (validate) {
+            const err = validate(draft)
+            if (err) {
+                setError(err)
+                return
+            }
+        }
         onChange(draft)
+        setError(null)
         setIsEditing(false)
     }
 
     const handleCancel = () => {
         setDraft(value)
+        setError(null)
         setIsEditing(false)
     }
 
@@ -37,9 +56,11 @@ const EditableField = ({ label, value, onChange }: EditableFieldProps) => {
             {isEditing ? (
                 <TextField
                     value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
+                    onChange={(e) => handleDraftChange(e.target.value)}
                     slotProps={{ htmlInput: { size: draft.length || 1 } }}
                     sx={{ width: 'auto' }}
+                    error={!!error}
+                    helperText={error}
                 />
             ) : (
                 <Typography variant="body2">{value}</Typography>
@@ -58,6 +79,7 @@ const EditableField = ({ label, value, onChange }: EditableFieldProps) => {
                             '&:hover': { backgroundColor: 'grey.100' },
                         }}
                         onClick={handleConfirm}
+                        disabled={!!error}
                     >
                         <CheckCircleIcon />
                     </Button>
