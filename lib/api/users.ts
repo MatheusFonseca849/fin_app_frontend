@@ -17,7 +17,7 @@ export const usersApi = {
   },
 
   update: async (userId: string, data: UpdateUserData) => {
-    const res = await api.put<User>(`/users/${userId}`, data);
+    const res = await api.put<User & { message?: string }>(`/users/${userId}`, data);
     return res.data;
   },
 
@@ -42,6 +42,16 @@ export const usersApi = {
 
   delete: async (userId: string) => {
     const res = await api.delete<{ message: string }>(`/users/${userId}`);
+    return res.data;
+  },
+
+  cancelEmailChange: async () => {
+    const res = await api.post<{ message: string }>('/users/cancel-email-change');
+    return res.data;
+  },
+
+  resendEmailChange: async () => {
+    const res = await api.post<{ message: string }>('/users/resend-email-change');
     return res.data;
   },
 };

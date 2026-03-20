@@ -1,6 +1,6 @@
 'use client'
 
-import { Alert, Avatar, Badge, Box, Button, CircularProgress, Divider, IconButton, Stack, Typography } from "@mui/material"
+import { Alert, Avatar, Badge, Box, Button, CircularProgress, Divider, IconButton, Link, Stack, Typography } from "@mui/material"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import EditableField from "@/app/components/EditableField"
@@ -26,7 +26,7 @@ const validateEmail = (value: string): string | null => {
 }
 
 const Profile = () => {
-    const { user, updateUser, uploadAvatar, logout } = useAuth();
+    const { user, updateUser, uploadAvatar, logout, refreshUser } = useAuth();
     const router = useRouter();
 
     // Local edit state
@@ -80,8 +80,14 @@ const Profile = () => {
             if (lastName !== user.lastName) updates.lastName = lastName;
             if (email !== user.email) updates.email = email;
 
-            await updateUser(updates);
-            setFeedback({ message: 'Perfil atualizado com sucesso.', severity: 'success' });
+            const responseMessage = await updateUser(updates);
+            if (responseMessage) {
+                setFeedback({ message: responseMessage, severity: 'success' });
+                // Reset email field to current (unchanged) email since the change is pending
+                setEmail(user.email);
+            } else {
+                setFeedback({ message: 'Perfil atualizado com sucesso.', severity: 'success' });
+            }
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Erro ao salvar alterações.';
             setFeedback({ message: msg, severity: 'error' });
@@ -165,6 +171,25 @@ const Profile = () => {
         }
     }, [user, logout, router]);
 
+    const handleResendEmailChange = useCallback(async () => {
+        try {
+            await usersApi.resendEmailChange();
+            setFeedback({ message: 'Email de verificação reenviado.', severity: 'success' });
+        } catch {
+            setFeedback({ message: 'Erro ao reenviar email.', severity: 'error' });
+        }
+    }, []);
+
+    const handleCancelEmailChange = useCallback(async () => {
+        try {
+            await usersApi.cancelEmailChange();
+            setFeedback({ message: 'Alteração de email cancelada.', severity: 'success' });
+            await refreshUser();
+        } catch {
+            setFeedback({ message: 'Erro ao cancelar alteração.', severity: 'error' });
+        }
+    }, [refreshUser]);
+
     if (!user) return null;
 
     return (
@@ -218,6 +243,30 @@ const Profile = () => {
                 <EditableField label="Nome" value={firstName} onChange={setFirstName} validate={validateName} />
                 <EditableField label="Sobrenome" value={lastName} onChange={setLastName} validate={validateName} />
                 <EditableField label="Email" value={email} onChange={setEmail} validate={validateEmail} />
+                {user.pendingEmail && (
+                    <Alert severity="info" sx={{ width: '100%', maxWidth: 500 }}>
+                        <Typography variant="body2">
+                            Verificação pendente para: <strong>{user.pendingEmail}</strong>
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                            <Link
+                                component="button"
+                                variant="body2"
+                                onClick={handleResendEmailChange}
+                            >
+                                Reenviar
+                            </Link>
+                            <Link
+                                component="button"
+                                variant="body2"
+                                color="error"
+                                onClick={handleCancelEmailChange}
+                            >
+                                Cancelar alteração
+                            </Link>
+                        </Box>
+                    </Alert>
+                )}
                 <Button variant="contained" onClick={() => setPasswordModalOpen(true)}>Alterar Senha</Button>
             </Box>
 

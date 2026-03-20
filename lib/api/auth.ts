@@ -22,6 +22,7 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
+  pendingEmail?: string | null;
   avatarUrl: string | null;
   role: 'user' | 'admin';
   isVerified: boolean;
@@ -95,6 +96,13 @@ export const authApi = {
 
   resetPassword: async (data: ResetPasswordData) => {
     const res = await api.post<{ message: string }>('/users/reset-password', data);
+    return res.data;
+  },
+
+  verifyEmailChange: async (token: string, email: string) => {
+    const res = await api.get<{ message: string }>('/users/verify-email-change', {
+      params: { token, email },
+    });
     return res.data;
   },
 };
