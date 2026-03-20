@@ -17,7 +17,7 @@ interface AuthContextType extends AuthState {
   login: (data: LoginData) => Promise<void>;
   register: (data: RegisterData) => Promise<{ message: string }>;
   logout: () => Promise<void>;
-  updateUser: (data: UpdateUserData) => Promise<void>;
+  updateUser: (data: UpdateUserData) => Promise<string | undefined>;
   uploadAvatar: (file: File) => Promise<string>;
   clearError: () => void;
   refreshUser: () => Promise<void>;
@@ -122,12 +122,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const updateUser = useCallback(async (data: UpdateUserData) => {
-    if (!user) return;
+  const updateUser = useCallback(async (data: UpdateUserData): Promise<string | undefined> => {
+    if (!user) return undefined;
     setError(null);
     try {
       const updated = await usersApi.update(user._id, data);
-      setUser(updated);
+      const { message, ...userData } = updated;
+      setUser(userData);
+      return message;
     } catch (err: unknown) {
       const { message, status } = extractError(err, 'Erro ao atualizar perfil');
       setError(message);

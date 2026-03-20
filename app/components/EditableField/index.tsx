@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, TextField, Typography, Button } from "@mui/material"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import EditIcon from '@mui/icons-material/Edit'
 import { Cancel } from "@mui/icons-material"
@@ -17,6 +17,14 @@ const EditableField = ({ label, value, onChange, validate }: EditableFieldProps)
     const [isEditing, setIsEditing] = useState(false)
     const [draft, setDraft] = useState(value)
     const [error, setError] = useState<string | null>(null)
+
+    const inputRef = useRef<HTMLInputElement | null>(null)
+
+    useEffect(() => {
+        if (isEditing) {
+            inputRef.current?.focus()
+        }
+    }, [isEditing])
 
     const handleEdit = () => {
         setDraft(value)
@@ -55,12 +63,14 @@ const EditableField = ({ label, value, onChange, validate }: EditableFieldProps)
             <Typography variant="h6">{label}:</Typography>
             {isEditing ? (
                 <TextField
+                    inputRef={inputRef}
                     value={draft}
                     onChange={(e) => handleDraftChange(e.target.value)}
                     slotProps={{ htmlInput: { size: draft.length || 1 } }}
                     sx={{ width: 'auto' }}
                     error={!!error}
                     helperText={error}
+                    onKeyDown={(e) => { e.key === 'Enter' ? handleConfirm() : e.key === 'Escape' ? handleCancel() : null }}
                 />
             ) : (
                 <Typography variant="body2">{value}</Typography>
