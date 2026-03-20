@@ -14,6 +14,8 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   categories: Category[];
+  themeModeOverride: 'light' | 'dark' | null;
+  setThemeModeOverride: (mode: 'light' | 'dark' | null) => void;
   login: (data: LoginData) => Promise<void>;
   register: (data: RegisterData) => Promise<{ message: string }>;
   logout: () => Promise<void>;
@@ -33,6 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [themeModeOverride, setThemeModeOverride] = useState<'light' | 'dark' | null>(null);
 
   const isAuthenticated = !!user;
 
@@ -157,6 +160,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo<AuthContextType>(() => ({
     user,
     categories,
+    themeModeOverride,
+    setThemeModeOverride,
     isAuthenticated,
     isLoading,
     error,
@@ -170,7 +175,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     refreshCategories,
     patchUser,
     setCategories,
-  }), [user, categories, isAuthenticated, isLoading, error, login, register, logout, updateUser, uploadAvatar, clearError, refreshUser, refreshCategories, patchUser]);
+  }), [user, categories, themeModeOverride, isAuthenticated, isLoading, error, login, register, logout, updateUser, uploadAvatar, clearError, refreshUser, refreshCategories, patchUser]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -31,11 +31,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AppRouterCacheProvider options={{ key: 'css' }}>
-          <ThemeRegistry>
-            <AuthProvider>
+          <AuthProvider>
+            <ThemeRegistry>
               {children}
-            </AuthProvider>
-          </ThemeRegistry>
+            </ThemeRegistry>
+          </AuthProvider>
         </AppRouterCacheProvider>
       </body>
     </html>
