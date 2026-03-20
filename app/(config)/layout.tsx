@@ -1,15 +1,26 @@
-import { Box, Drawer, List, ListItem, ListItemIcon, Toolbar } from "@mui/material"
+'use client';
+
+import { Box, CircularProgress, Drawer, List, ListItem, ListItemIcon, Toolbar } from "@mui/material"
 import Link from "next/link"
 import Header from "../components/Header"
 import PersonIcon from '@mui/icons-material/Person';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import CategoryIcon from '@mui/icons-material/Category';
-import RepeatIcon from '@mui/icons-material/Repeat';
 import SettingsIcon from '@mui/icons-material/Settings';
+import { useRequireAuth } from '@/lib/hooks/useRequireAuth';
 
 const drawerWidth = 240;
 
 const ConfigLayout = ({ children }: { children: React.ReactNode }) => {
+    const { isLoading, isAuthenticated } = useRequireAuth({ redirectTo: '/login' });
+
+    if (isLoading || !isAuthenticated) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100dvh' }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
     return (
         <div>
             <Header />
@@ -29,17 +40,9 @@ const ConfigLayout = ({ children }: { children: React.ReactNode }) => {
                             <Link href="/config/profile">Perfil</Link>
                         </ListItem>
                         <ListItem>
-                            <ListItemIcon><ReceiptLongIcon /></ListItemIcon>
-                            <Link href="/config/transactions">Transações</Link>
-                        </ListItem>
-                        <ListItem>
                             <ListItemIcon><CategoryIcon /></ListItemIcon>
                             <Link href="/config/categories">Categorias</Link>
                         </ListItem>
-                        {/* <ListItem>
-                            <ListItemIcon><RepeatIcon /></ListItemIcon>
-                            <Link href="/config/recurring">Transações Recorrentes</Link>
-                        </ListItem> */}
                         <ListItem>
                             <ListItemIcon><SettingsIcon /></ListItemIcon>
                             <Link href="/config/settings">Configurações</Link>

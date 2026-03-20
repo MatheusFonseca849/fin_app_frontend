@@ -1,52 +1,146 @@
 'use client'
 
-import { Box, Card, Grid, IconButton, MenuItem, Select, Table, TableBody, TableCell, Tooltip, TableContainer, TableHead, TableRow, Typography } from "@mui/material"
-import { useState } from "react"
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { Box, Card, CircularProgress, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
+import { useMemo, useState, useEffect, useCallback } from "react"
 import { ComposedChart, Bar, Line, XAxis, YAxis, Legend, ResponsiveContainer, AreaChart, Area } from "recharts"
 import { Tooltip as RechartsTooltip } from "recharts";
-import { monthlyBalance, mockExpenses, mockIncome } from "@/app/mock/expenses"
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 import TransactionsTable from "@/app/components/TransactionsTable";
+import { transactionsApi } from "@/lib/api"
+import type { Transaction, MonthlySummaryItem, TransactionsResponse } from "@/lib/api/transactions"
 
+type RangeKey = '3m' | '6m' | '1y' | '2y' | '3y' | '5y' | 'all';
+
+const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
+    { value: '3m', label: '3M' },
+    { value: '6m', label: '6M' },
+    { value: '1y', label: '1A' },
+    { value: '2y', label: '2A' },
+    { value: '3y', label: '3A' },
+    { value: '5y', label: '5A' },
+    { value: 'all', label: 'Tudo' },
+];
+
+const RANGE_MONTHS: Record<RangeKey, number | undefined> = {
+    '3m': 3,
+    '6m': 6,
+    '1y': 12,
+    '2y': 24,
+    '3y': 36,
+    '5y': 60,
+    'all': undefined,
+};
 
 const HistoryPage = () => {
 
-    const RECURRENT_DESCRIPTIONS = [
-        'Aluguel', 'Conta de Luz', 'Conta de Água', 'Internet',
-        'Plano de Saúde', 'Academia', 'Netflix', 'Spotify', 'Salário',
-    ]
+    const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
 
-    const rows = [
-        ...mockExpenses.map((e) => ({ id: e.id, date: e.date, description: e.description, amount: e.amount, type: 'Despesa' as const, category: e.category, isRecurrent: RECURRENT_DESCRIPTIONS.includes(e.description) })),
-        ...mockIncome.map((i) => ({ id: i.id, date: i.date, description: i.description, amount: i.amount, type: 'Receita' as const, category: i.source, isRecurrent: RECURRENT_DESCRIPTIONS.includes(i.description) })),
-    ].sort((a, b) => b.date.localeCompare(a.date))
+    const [range, setRange] = useState<RangeKey>('6m');
+
+    // Chart data from server-side aggregation
+    const [chartData, setChartData] = useState<MonthlySummaryItem[]>([]);
+
+    // Table data with server-side pagination
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [tablePage, setTablePage] = useState(0);
+    const [tableRowsPerPage, setTableRowsPerPage] = useState(25);
+    const [tableTotalPages, setTableTotalPages] = useState(1);
+    const [tableTotal, setTableTotal] = useState(0);
+
+    const fetchChartData = useCallback(async () => {
+        try {
+            const res = await transactionsApi.getMonthlySummary();
+            setChartData(res.data);
+        } catch (error) {
+            console.error('Failed to fetch monthly summary:', error);
+        }
+    }, []);
+
+    const fetchTransactions = useCallback(async () => {
+        try {
+            setIsLoadingTransactions(true);
+            const res: TransactionsResponse = await transactionsApi.getAll({
+                page: tablePage + 1,
+                limit: tableRowsPerPage,
+            });
+            setTransactions(res.data);
+            setTableTotalPages(res.pagination.pages);
+            setTableTotal(res.pagination.total);
+        } catch (error) {
+            console.error('Failed to fetch transactions:', error);
+        } finally {
+            setIsLoadingTransactions(false);
+        }
+    }, [tablePage, tableRowsPerPage]);
+
+    useEffect(() => { fetchChartData(); }, [fetchChartData]);
+    useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
+
+    const allFormattedChartData = useMemo(() =>
+        chartData.map(item => {
+            const label = new Date(item.year, item.month - 1)
+                .toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+            return {
+                month: label,
+                despesas: Number((item.despesas / 100).toFixed(2)),
+                receitas: Number((item.receitas / 100).toFixed(2)),
+                saldo: Number((item.saldo / 100).toFixed(2)),
+            };
+        }),
+        [chartData]
+    );
+
+    const filteredChartData = useMemo(() => {
+        const months = RANGE_MONTHS[range];
+        if (!months) return allFormattedChartData;
+        return allFormattedChartData.slice(-months);
+    }, [range, allFormattedChartData]);
+
+    const handleTablePageChange = useCallback((newPage: number) => {
+        setTablePage(newPage);
+    }, []);
+
+    const handleTableRowsPerPageChange = useCallback((newRowsPerPage: number) => {
+        setTableRowsPerPage(newRowsPerPage);
+        setTablePage(0);
+    }, []);
 
     return (
         <div>
-            <Grid container >
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 2 }}>
+                <ToggleButtonGroup
+                    value={range}
+                    exclusive
+                    onChange={(_, value) => value && setRange(value)}
+                    size="small"
+                >
+                    {RANGE_OPTIONS.map((opt) => (
+                        <ToggleButton key={opt.value} value={opt.value} sx={{ px: 2 }}>
+                            {opt.label}
+                        </ToggleButton>
+                    ))}
+                </ToggleButtonGroup>
+            </Box>
+            <Grid container>
                 <Grid size={6} sx={{ p: 2 }} spacing={2}>
-                <Card sx={{ p: 2 }}>
-                    <Typography variant="h4" sx={{ marginBottom: 2}}>Despesas x Receitas</Typography>
-                    <ResponsiveContainer width="100%" height={350}>
-                    <ComposedChart data={monthlyBalance}>
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <RechartsTooltip />
-                        <Legend />
-                        <Bar dataKey="despesas" name="Despesas" fill="#fb6c1b" />
-                        <Line type="monotone" dataKey="receitas" name="Receitas" stroke="#1fcf25" strokeWidth={2} />
-                    </ComposedChart>
-                    </ResponsiveContainer>
-                </Card>
+                    <Card sx={{ p: 2 }}>
+                        <Typography variant="h4" sx={{ marginBottom: 2}}>Despesas x Receitas</Typography>
+                        <ResponsiveContainer width="100%" height={350}>
+                            <ComposedChart data={filteredChartData}>
+                                <XAxis dataKey="month" />
+                                <YAxis />
+                                <RechartsTooltip />
+                                <Legend />
+                                <Bar dataKey="despesas" name="Despesas" fill="#fb6c1b" />
+                                <Line type="monotone" dataKey="receitas" name="Receitas" stroke="#1fcf25" strokeWidth={2} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </Card>
                 </Grid>
                 <Grid size={6} sx={{ p: 2 }}>
                     <Card sx={{ p: 2 }}>
                         <Typography variant="h4" sx={{ marginBottom: 2}}>Histórico de Saldo</Typography>
                         <ResponsiveContainer width="100%" height={350}>
-                            <AreaChart data={monthlyBalance}>
+                            <AreaChart data={filteredChartData}>
                                 <XAxis dataKey="month" />
                                 <YAxis />
                                 <RechartsTooltip />
@@ -60,7 +154,26 @@ const HistoryPage = () => {
                 <Grid size={12} sx={{ p: 2 }} spacing={2}>
                     <Card sx={{ p: 2 }}>
                         <Typography variant="h4" sx={{ marginBottom: 2}}>Transações</Typography>
-                       <TransactionsTable rows={rows} onEdit={(row) => console.log('Edit: ', row)} onDelete={(row) => console.log('Delete: ', row)}/>
+                        {
+                        isLoadingTransactions ? (
+                            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300}}>
+                                <CircularProgress />
+                            </Box>
+                        ) : (
+                            <TransactionsTable
+                                transactions={transactions}
+                                onTransactionChange={fetchTransactions}
+                                serverPagination={{
+                                    page: tablePage,
+                                    pages: tableTotalPages,
+                                    total: tableTotal,
+                                    rowsPerPage: tableRowsPerPage,
+                                    onPageChange: handleTablePageChange,
+                                    onRowsPerPageChange: handleTableRowsPerPageChange,
+                                }}
+                            />
+                        )
+                        }
                     </Card>
                 </Grid>
             </Grid>

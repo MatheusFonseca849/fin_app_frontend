@@ -6,6 +6,8 @@ interface IModalComponent {
     title: string
     action: () => void
     layout: React.ReactNode
+    cancelLabel?: string
+    confirmLabel?: string
 }
 
 const modalBoxSx = {
@@ -22,7 +24,7 @@ const modalBoxSx = {
     flexDirection: 'column',
 }
 
-const ModalComponent = ({open, handleClose, title, action, layout}: IModalComponent) => {
+const ModalComponent = ({open, handleClose, title, action, layout, cancelLabel = 'Cancelar', confirmLabel = 'Confirmar'}: IModalComponent) => {
     return(
         <Modal
             open={open}
@@ -38,8 +40,8 @@ const ModalComponent = ({open, handleClose, title, action, layout}: IModalCompon
                 </Box>
                 <Divider />
                 <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ px: 3, py: 2 }}>
-                    <Button onClick={handleClose}>Cancelar</Button>
-                    <Button variant="contained" onClick={action}>Confirmar</Button>
+                    <Button onClick={handleClose}>{cancelLabel}</Button>
+                    <Button variant="contained" onClick={action}>{confirmLabel}</Button>
                 </Stack>
             </Box>
         </Modal>   
