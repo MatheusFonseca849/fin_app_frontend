@@ -69,7 +69,7 @@ export function getTheme(mode: PaletteMode) {
       MuiIconButton: {
         styleOverrides: {
           root: {
-            color: '#63885a',
+            color: isLight ? '#63885a' : '#8fbf84',
           },
         },
       },

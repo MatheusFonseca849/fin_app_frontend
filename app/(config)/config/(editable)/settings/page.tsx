@@ -3,11 +3,13 @@
 import { Box, Divider, MenuItem, Select, Switch, Typography } from "@mui/material"
 import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/lib/contexts/AuthContext"
+import { usePreferences } from "@/lib/contexts/PreferencesContext"
 import { useEditablePage } from "@/lib/contexts/EditablePageContext"
 import type { UserPreferences } from "@/lib/api"
 
 const SettingsPage = () => {
-    const { user, updateUser, setThemeModeOverride } = useAuth();
+    const { user, updateUser } = useAuth();
+    const { setThemeModeOverride } = usePreferences();
     const { setIsDirty, setIsSaving, setFeedback, registerSave, registerCancel } = useEditablePage();
 
     // Local edit state for preferences

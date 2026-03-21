@@ -18,6 +18,7 @@ import type { EventContentArg } from '@fullcalendar/core';
 import { transactionsApi } from "@/lib/api"
 import type { Transaction } from "@/lib/api"
 import { useAuth } from "@/lib/contexts/AuthContext"
+import { useCategories } from "@/lib/contexts/CategoriesContext"
 
 interface CalendarTransaction {
     id: string;
@@ -30,7 +31,8 @@ interface CalendarTransaction {
 
 const Calendar = () => {
     const calendarRef = useRef<FullCalendar>(null);
-    const { user, patchUser, categories: allCategories } = useAuth();
+    const { user, patchUser } = useAuth();
+    const { categories: allCategories } = useCategories();
 
     // Transaction data
     const [transactions, setTransactions] = useState<Transaction[]>([]);

@@ -34,6 +34,7 @@ import type {
   CustomMapping,
 } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useCategories } from '@/lib/contexts/CategoriesContext';
 
 type Step = 'select' | 'mapping' | 'preview';
 
@@ -57,7 +58,8 @@ const modalBoxSx = {
 };
 
 const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
-  const { patchUser, categories: allCategories } = useAuth();
+  const { patchUser } = useAuth();
+  const { categories: allCategories } = useCategories();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step management

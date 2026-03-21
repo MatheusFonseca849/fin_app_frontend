@@ -2,13 +2,12 @@
 
 import { AppBar, Avatar, Divider, IconButton, ListItemIcon, ListItemText, Toolbar, Typography, Menu, MenuItem, Box } from "@mui/material";
 import PersonIcon from '@mui/icons-material/Person';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import CategoryIcon from '@mui/icons-material/Category';
-import RepeatIcon from '@mui/icons-material/Repeat';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import { useState } from "react";
+import { useTheme } from "@mui/material/styles";
 import { useRouter } from "next/navigation";
 import DrawerMenu from "@/app/components/DrawerMenu";
 import Link from "next/link";
@@ -19,6 +18,8 @@ const Header = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const { user, logout } = useAuth();
     const router = useRouter();
+    const theme = useTheme();
+    const isLight = theme.palette.mode === 'light';
 
     const handleLogout = async () => {
         setAnchorEl(null);
@@ -36,10 +37,9 @@ const Header = () => {
                 <Toolbar>
                     <IconButton
                         edge="start"
-                        color="inherit"
                         aria-label="menu"
                         onClick={() => setDrawerOpen(!drawerOpen)}
-                        sx={{ mr: 2, color: 'background.default' }}
+                        sx={{ mr: 2, color: isLight ? theme.palette.grey[50] : theme.palette.secondary.main }}
                     >
                         <MenuIcon />
                     </IconButton>
