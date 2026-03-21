@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import ThemeRegistry from './ThemeRegistry';
 import { AuthProvider } from '@/lib/contexts/AuthContext';
+import { CategoriesProvider } from '@/lib/contexts/CategoriesContext';
+import { PreferencesProvider } from '@/lib/contexts/PreferencesContext';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,9 +34,13 @@ export default function RootLayout({
       >
         <AppRouterCacheProvider options={{ key: 'css' }}>
           <AuthProvider>
-            <ThemeRegistry>
-              {children}
-            </ThemeRegistry>
+            <CategoriesProvider>
+              <PreferencesProvider>
+                <ThemeRegistry>
+                  {children}
+                </ThemeRegistry>
+              </PreferencesProvider>
+            </CategoriesProvider>
           </AuthProvider>
         </AppRouterCacheProvider>
       </body>

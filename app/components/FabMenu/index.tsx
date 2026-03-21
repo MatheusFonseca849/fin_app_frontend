@@ -9,9 +9,11 @@ import AddCategory, { CategoryFormData, initialCategoryFormData } from "../AddCa
 import CsvImportModal from "../CsvImportModal";
 import { transactionsApi, categoriesApi } from "@/lib/api";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { useCategories } from "@/lib/contexts/CategoriesContext";
 
 const FabMenu = () => {
-    const { user, patchUser, categories: allCategories, setCategories } = useAuth();
+    const { user, patchUser } = useAuth();
+    const { categories: allCategories, setCategories } = useCategories();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [transactionModalOpen, setTransactionModalOpen] = useState(false);
     const [transactionForm, setTransactionForm] = useState<TransactionFormData>(initialTransactionFormData);

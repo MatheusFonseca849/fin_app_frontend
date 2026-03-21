@@ -7,10 +7,10 @@ import ModalComponent from "@/app/components/ModalComponent"
 import AddCategory, { CategoryFormData, initialCategoryFormData } from "@/app/components/AddCategoryModal"
 import { categoriesApi } from "@/lib/api"
 import type { Category } from "@/lib/api"
-import { useAuth } from "@/lib/contexts/AuthContext"
+import { useCategories } from "@/lib/contexts/CategoriesContext"
 
 const CategoriesPage = () => {
-    const { categories, setCategories } = useAuth()
+    const { categories, setCategories } = useCategories()
 
     // Add/Edit modal state
     const [isModalOpen, setIsModalOpen] = useState(false)

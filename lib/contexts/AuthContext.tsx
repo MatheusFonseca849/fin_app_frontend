@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { authApi, usersApi, categoriesApi } from '@/lib/api';
+import { authApi, usersApi } from '@/lib/api';
 import { setAccessToken } from '@/lib/api/client';
-import type { User, Category, RegisterData, LoginData, UpdateUserData } from '@/lib/api';
+import type { User, RegisterData, LoginData, UpdateUserData } from '@/lib/api';
 
 interface AuthState {
   user: User | null;
@@ -13,9 +13,6 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  categories: Category[];
-  themeModeOverride: 'light' | 'dark' | null;
-  setThemeModeOverride: (mode: 'light' | 'dark' | null) => void;
   login: (data: LoginData) => Promise<void>;
   register: (data: RegisterData) => Promise<{ message: string }>;
   logout: () => Promise<void>;
@@ -23,32 +20,19 @@ interface AuthContextType extends AuthState {
   uploadAvatar: (file: File) => Promise<string>;
   clearError: () => void;
   refreshUser: () => Promise<void>;
-  refreshCategories: () => Promise<void>;
   patchUser: (partial: Partial<User>) => void;
-  setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [themeModeOverride, setThemeModeOverride] = useState<'light' | 'dark' | null>(null);
 
   const isAuthenticated = !!user;
 
   const clearError = useCallback(() => setError(null), []);
-
-  const refreshCategories = useCallback(async () => {
-    try {
-      const cats = await categoriesApi.getAll();
-      setCategories(cats);
-    } catch {
-      setCategories([]);
-    }
-  }, []);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -64,16 +48,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const initAuth = async () => {
       try { 
         await authApi.refresh();
-        const [userData, cats] = await Promise.all([
-          usersApi.getMe(),
-          categoriesApi.getAll()
-        ]);
+        const userData = await usersApi.getMe();
         setUser(userData);
-        setCategories(cats);
       } catch {
         setAccessToken(null);
         setUser(null);
-        setCategories([]);
       } finally {
         setIsLoading(false);
       }
@@ -88,7 +67,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { user: userData } = await authApi.login(data);
       setUser(userData);
-      refreshCategories();
     } catch (err: unknown) {
       const { message, status } = extractError(err, 'Erro ao fazer login');
       setError(message);
@@ -121,7 +99,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setAccessToken(null);
       setUser(null);
-      setCategories([]);
     }
   }, []);
 
@@ -159,9 +136,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = useMemo<AuthContextType>(() => ({
     user,
-    categories,
-    themeModeOverride,
-    setThemeModeOverride,
     isAuthenticated,
     isLoading,
     error,
@@ -172,10 +146,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     uploadAvatar,
     clearError,
     refreshUser,
-    refreshCategories,
     patchUser,
-    setCategories,
-  }), [user, categories, themeModeOverride, isAuthenticated, isLoading, error, login, register, logout, updateUser, uploadAvatar, clearError, refreshUser, refreshCategories, patchUser]);
+  }), [user, isAuthenticated, isLoading, error, login, register, logout, updateUser, uploadAvatar, clearError, refreshUser, patchUser]);
 
   return (
     <AuthContext.Provider value={value}>

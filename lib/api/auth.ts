@@ -78,9 +78,7 @@ export const authApi = {
   },
 
   verifyEmail: async (token: string, email: string) => {
-    const res = await api.get<{ message: string }>('/users/verify-email', {
-      params: { token, email },
-    });
+    const res = await api.post<{ message: string }>('/users/verify-email', { token, email });
     return res.data;
   },
 
@@ -100,9 +98,7 @@ export const authApi = {
   },
 
   verifyEmailChange: async (token: string, email: string) => {
-    const res = await api.get<{ message: string }>('/users/verify-email-change', {
-      params: { token, email },
-    });
+    const res = await api.post<{ message: string }>('/users/verify-email-change', { token, email });
     return res.data;
   },
 };

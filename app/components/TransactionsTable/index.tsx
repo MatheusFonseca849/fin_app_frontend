@@ -38,6 +38,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import { transactionsApi } from '@/lib/api'
 import type { Transaction, BulkUpdateData } from '@/lib/api'
 import { useAuth } from '@/lib/contexts/AuthContext'
+import { useCategories } from '@/lib/contexts/CategoriesContext'
 import ModalComponent from '@/app/components/ModalComponent'
 import AddTransaction, { initialTransactionFormData, TransactionFormData } from '@/app/components/AddTransactionModal'
 
@@ -68,7 +69,8 @@ interface TransactionsTableProps {
 }
 
 const TransactionsTable = ({ transactions, onTransactionChange, serverPagination }: TransactionsTableProps) => {
-    const { user, patchUser, categories: allCategories } = useAuth()
+    const { user, patchUser } = useAuth()
+    const { categories: allCategories } = useCategories()
 
     // Pagination (used only in client-side mode)
     const [localPage, setLocalPage] = useState(0)

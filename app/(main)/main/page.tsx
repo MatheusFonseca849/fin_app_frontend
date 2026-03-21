@@ -12,10 +12,12 @@ import { useCallback, useEffect, useState, useMemo } from "react"
 import { transactionsApi, usersApi } from "@/lib/api"
 import type { Transaction } from "@/lib/api"
 import { useAuth } from "@/lib/contexts/AuthContext"
+import { useCategories } from "@/lib/contexts/CategoriesContext"
 
 const Dashboard = () => {
 
-    const { user, patchUser, categories: allCategories } = useAuth();
+    const { user, patchUser } = useAuth();
+    const { categories: allCategories } = useCategories();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditingBalance, setIsEditingBalance] = useState(false);
