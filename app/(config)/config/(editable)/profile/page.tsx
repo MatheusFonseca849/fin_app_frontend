@@ -9,7 +9,7 @@ import ModalComponent from "@/app/components/ModalComponent"
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { usersApi } from "@/lib/api"
-import { useUnsavedChanges } from "@/lib/hooks/useUnsavedChanges"
+import { useEditablePage } from "@/lib/contexts/EditablePageContext"
 
 const validateName = (value: string): string | null => {
     const trimmed = value.trim()
@@ -27,6 +27,7 @@ const validateEmail = (value: string): string | null => {
 
 const Profile = () => {
     const { user, updateUser, uploadAvatar, logout, refreshUser } = useAuth();
+    const { setIsDirty, setIsSaving, setFeedback, feedback, registerSave, registerCancel } = useEditablePage();
     const router = useRouter();
 
     // Local edit state
@@ -35,10 +36,8 @@ const Profile = () => {
     const [email, setEmail] = useState('');
 
     // UI state
-    const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [feedback, setFeedback] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [passwordModalOpen, setPasswordModalOpen] = useState(false);
     const [currentPassword, setCurrentPassword] = useState('');
@@ -65,44 +64,48 @@ const Profile = () => {
         );
     }, [user, firstName, lastName, email]);
 
-    // Unsaved changes navigation guard
-    const { showModal: showLeaveModal, confirmNavigation, cancelNavigation } = useUnsavedChanges(isDirty);
+    // Sync isDirty to editable layout context
+    useEffect(() => {
+        setIsDirty(isDirty);
+    }, [isDirty, setIsDirty]);
+
+    // Register save/cancel handlers with the editable layout
+    useEffect(() => {
+        registerSave(async () => {
+            if (!user || !isDirty) return;
+            setIsSaving(true);
+            setFeedback(null);
+            try {
+                const updates: Record<string, string> = {};
+                if (firstName !== user.firstName) updates.firstName = firstName;
+                if (lastName !== user.lastName) updates.lastName = lastName;
+                if (email !== user.email) updates.email = email;
+
+                const responseMessage = await updateUser(updates);
+                if (responseMessage) {
+                    setFeedback({ message: responseMessage, severity: 'success' });
+                    setEmail(user.email);
+                } else {
+                    setFeedback({ message: 'Perfil atualizado com sucesso.', severity: 'success' });
+                }
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : 'Erro ao salvar alterações.';
+                setFeedback({ message: msg, severity: 'error' });
+            } finally {
+                setIsSaving(false);
+            }
+        });
+
+        registerCancel(() => {
+            if (!user) return;
+            setFirstName(user.firstName);
+            setLastName(user.lastName);
+            setEmail(user.email);
+            setFeedback(null);
+        });
+    }, [user, isDirty, firstName, lastName, email, updateUser, registerSave, registerCancel, setIsSaving, setFeedback]);
 
     // --- Handlers ---
-
-    const handleSave = useCallback(async () => {
-        if (!user || !isDirty) return;
-        setIsSaving(true);
-        setFeedback(null);
-        try {
-            const updates: Record<string, string> = {};
-            if (firstName !== user.firstName) updates.firstName = firstName;
-            if (lastName !== user.lastName) updates.lastName = lastName;
-            if (email !== user.email) updates.email = email;
-
-            const responseMessage = await updateUser(updates);
-            if (responseMessage) {
-                setFeedback({ message: responseMessage, severity: 'success' });
-                // Reset email field to current (unchanged) email since the change is pending
-                setEmail(user.email);
-            } else {
-                setFeedback({ message: 'Perfil atualizado com sucesso.', severity: 'success' });
-            }
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Erro ao salvar alterações.';
-            setFeedback({ message: msg, severity: 'error' });
-        } finally {
-            setIsSaving(false);
-        }
-    }, [user, isDirty, firstName, lastName, email, updateUser]);
-
-    const handleCancel = useCallback(() => {
-        if (!user) return;
-        setFirstName(user.firstName);
-        setLastName(user.lastName);
-        setEmail(user.email);
-        setFeedback(null);
-    }, [user]);
 
     const handleAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -118,7 +121,7 @@ const Profile = () => {
             setIsUploading(false);
             e.target.value = '';
         }
-    }, [uploadAvatar]);
+    }, [uploadAvatar, setFeedback]);
 
     const handleChangePassword = useCallback(async () => {
         setFeedback(null);
@@ -148,7 +151,7 @@ const Profile = () => {
         } finally {
             setIsChangingPassword(false);
         }
-    }, [currentPassword, newPassword, confirmPassword, updateUser]);
+    }, [currentPassword, newPassword, confirmPassword, updateUser, setFeedback]);
 
     const handleClosePasswordModal = useCallback(() => {
         setPasswordModalOpen(false);
@@ -169,7 +172,7 @@ const Profile = () => {
             setDeleteModalOpen(false);
             setIsDeleting(false);
         }
-    }, [user, logout, router]);
+    }, [user, logout, router, setFeedback]);
 
     const handleResendEmailChange = useCallback(async () => {
         try {
@@ -178,7 +181,7 @@ const Profile = () => {
         } catch {
             setFeedback({ message: 'Erro ao reenviar email.', severity: 'error' });
         }
-    }, []);
+    }, [setFeedback]);
 
     const handleCancelEmailChange = useCallback(async () => {
         try {
@@ -188,7 +191,7 @@ const Profile = () => {
         } catch {
             setFeedback({ message: 'Erro ao cancelar alteração.', severity: 'error' });
         }
-    }, [refreshUser]);
+    }, [refreshUser, setFeedback]);
 
     if (!user) return null;
 
@@ -196,12 +199,6 @@ const Profile = () => {
         <Box>
             <Typography variant="h4" fontWeight={600}>Perfil</Typography>
             <Divider sx={{ my: 2 }} />
-
-            {feedback && (
-                <Alert severity={feedback.severity} sx={{ mb: 2 }} onClose={() => setFeedback(null)}>
-                    {feedback.message}
-                </Alert>
-            )}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, mt: 2 }}>
                 <Badge
@@ -270,24 +267,6 @@ const Profile = () => {
                 <Button variant="contained" onClick={() => setPasswordModalOpen(true)}>Alterar Senha</Button>
             </Box>
 
-            <Divider sx={{ mt: 10, mb: 5 }} />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                <Button
-                    variant="contained"
-                    onClick={handleSave}
-                    disabled={!isDirty || isSaving}
-                >
-                    {isSaving ? <CircularProgress size={24} /> : 'Salvar'}
-                </Button>
-                <Button
-                    variant="outlined"
-                    onClick={handleCancel}
-                    disabled={!isDirty}
-                    sx={{ '&:hover': { backgroundColor: '#f44336', color: 'background.default' } }}
-                >
-                    Cancelar
-                </Button>
-            </Box>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Button
                     variant="contained"
@@ -341,20 +320,6 @@ const Profile = () => {
                 action={handleChangePassword}
                 cancelLabel="Cancelar"
                 confirmLabel={isChangingPassword ? 'Salvando...' : 'Salvar'}
-            />
-
-            <ModalComponent
-                open={showLeaveModal}
-                handleClose={cancelNavigation}
-                title="Alterações não salvas"
-                layout={
-                    <Typography sx={{ py: 2 }}>
-                        Você tem alterações que ainda não foram salvas. Deseja sair da página mesmo assim?
-                    </Typography>
-                }
-                action={confirmNavigation}
-                cancelLabel="Ficar na Página"
-                confirmLabel="Confirmar"
             />
         </Box>
     )

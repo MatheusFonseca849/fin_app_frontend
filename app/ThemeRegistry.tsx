@@ -1,10 +1,16 @@
 'use client'
 
+import { useMemo } from 'react'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
-import theme from './theme'
+import { getTheme } from './theme'
+import { useAuth } from '@/lib/contexts/AuthContext'
 
 const ThemeRegistry = ({ children }: { children: React.ReactNode }) => {
+    const { user, themeModeOverride } = useAuth();
+    const mode = themeModeOverride ?? (user?.preferences?.darkMode ? 'dark' : 'light');
+    const theme = useMemo(() => getTheme(mode), [mode]);
+
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
