@@ -129,6 +129,14 @@ export interface CustomMapping {
   separator?: string;
 }
 
+export interface DashboardData {
+  monthlyExpenses: number;
+  monthlyIncome: number;
+  monthlyBalance: number;
+  expensesByCategory: { name: string; color: string; value: number }[];
+  upcomingExpenses: Transaction[];
+}
+
 export interface BulkActionResult {
   message: string;
   deletedCount?: number;
@@ -186,6 +194,11 @@ export const transactionsApi = {
     const params: Record<string, string> = {};
     if (months) params.months = String(months);
     const res = await api.get<{ data: MonthlySummaryItem[] }>('/records/monthly-summary', { params });
+    return res.data;
+  },
+
+  getDashboard: async () => {
+    const res = await api.get<DashboardData>('/records/dashboard');
     return res.data;
   },
 
