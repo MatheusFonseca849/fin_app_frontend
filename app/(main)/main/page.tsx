@@ -10,7 +10,7 @@ import ModalComponent from "@/app/components/ModalComponent"
 import AddTransaction, { initialTransactionFormData, TransactionFormData } from "@/app/components/AddTransactionModal"
 import { useCallback, useEffect, useState, useMemo } from "react"
 import { transactionsApi, usersApi } from "@/lib/api"
-import type { Transaction } from "@/lib/api"
+import type { Transaction, DashboardData } from "@/lib/api"
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { useCategories } from "@/lib/contexts/CategoriesContext"
 
@@ -18,7 +18,7 @@ const Dashboard = () => {
 
     const { user, patchUser } = useAuth();
     const { categories: allCategories } = useCategories();
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditingBalance, setIsEditingBalance] = useState(false);
     const [balanceInput, setBalanceInput] = useState('');
@@ -40,60 +40,36 @@ const Dashboard = () => {
     const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
 
-    const fetchTransactions = useCallback(async () => {
+    const fetchDashboard = useCallback(async () => {
         try {
-            const res = await transactionsApi.getAll();
-            setTransactions(res.data);
+            const data = await transactionsApi.getDashboard();
+            setDashboardData(data);
         } catch (error) {
-            console.error('Failed to fetch transactions:', error);
+            console.error('Failed to fetch dashboard data:', error);
         } finally {
             setIsLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchTransactions();
-    }, [fetchTransactions]);
+        fetchDashboard();
+    }, [fetchDashboard]);
 
     useEffect(() => {
-        const handler = () => fetchTransactions();
+        const handler = () => fetchDashboard();
         window.addEventListener('transaction-change', handler);
         return () => window.removeEventListener('transaction-change', handler);
-    }, [fetchTransactions]);
+    }, [fetchDashboard]);
 
-    const today = new Date().toISOString().split('T')[0];
-
-    const upcomingExpenses = useMemo(() =>
-        transactions
-            .filter(t => t.type === 'debito' && !t.isPaid && t.timestamp.split('T')[0] >= today)
-            .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
-            .slice(0, 4),
-        [transactions, today]
-    );
-
-    const now = new Date();
-    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-    const currentMonthTransactions = useMemo(() =>
-        transactions.filter(t => t.isPaid && t.timestamp.startsWith(currentMonthKey)),
-        [transactions, currentMonthKey]
-    );
-
-    const monthlyExpenseTotal = useMemo(() =>
-        currentMonthTransactions
-            .filter(t => t.type === 'debito')
-            .reduce((sum, t) => sum + t.value, 0) / 100,
-        [currentMonthTransactions]
-    );
-
-    const monthlyIncomeTotal = useMemo(() =>
-        currentMonthTransactions
-            .filter(t => t.type === 'credito')
-            .reduce((sum, t) => sum + t.value, 0) / 100,
-        [currentMonthTransactions]
-    );
-
+    const upcomingExpenses = dashboardData?.upcomingExpenses ?? [];
+    const monthlyExpenseTotal = (dashboardData?.monthlyExpenses ?? 0) / 100;
+    const monthlyIncomeTotal = (dashboardData?.monthlyIncome ?? 0) / 100;
     const monthlyBalance = monthlyIncomeTotal - monthlyExpenseTotal;
+    const expensesByCategory = (dashboardData?.expensesByCategory ?? []).map(c => ({
+        ...c,
+        value: c.value / 100,
+        fill: c.color,
+    }));
 
     const userBalance = (user?.balance ?? 0) / 100;
 
@@ -123,7 +99,7 @@ const Dashboard = () => {
     }, [balanceInput, patchUser]);
 
     const handleOpenEdit = useCallback((id: string) => {
-        const tx = transactions.find(t => t._id === id);
+        const tx = upcomingExpenses.find(t => t._id === id);
         if (!tx) return;
         setEditingTransaction(tx);
         setEditForm({
@@ -137,7 +113,7 @@ const Dashboard = () => {
             billingDay: tx.billingDay ? String(tx.billingDay) : '',
         });
         setIsEditModalOpen(true);
-    }, [transactions]);
+    }, [upcomingExpenses]);
 
     const handleCloseEdit = useCallback(() => {
         setIsEditModalOpen(false);
@@ -169,11 +145,11 @@ const Dashboard = () => {
     }, [editingTransaction, editForm, patchUser, handleCloseEdit]);
 
     const handleOpenDelete = useCallback((id: string) => {
-        const tx = transactions.find(t => t._id === id);
+        const tx = upcomingExpenses.find(t => t._id === id);
         if (!tx) return;
         setDeletingTransaction(tx);
         setIsDeleteDialogOpen(true);
-    }, [transactions]);
+    }, [upcomingExpenses]);
 
     const handleCloseDelete = useCallback(() => {
         setIsDeleteDialogOpen(false);
@@ -196,11 +172,11 @@ const Dashboard = () => {
     }, [deletingTransaction, patchUser, handleCloseDelete]);
 
     const handleOpenPayment = useCallback((id: string) => {
-        const tx = transactions.find(t => t._id === id);
+        const tx = upcomingExpenses.find(t => t._id === id);
         if (!tx) return;
         setPayingTransaction(tx);
         setIsPayDialogOpen(true);
-    }, [transactions]);
+    }, [upcomingExpenses]);
 
     const handleClosePayment = useCallback(() => {
         setIsPayDialogOpen(false);
@@ -227,27 +203,6 @@ const Dashboard = () => {
             .filter(c => c.type === editForm.type)
             .map(c => ({ _id: c._id, name: c.name }));
     }, [allCategories, editForm.type]);
-
-    const categoryColorMap = useMemo(() => {
-        const map: Record<string, string> = {};
-        allCategories.forEach(c => { map[c.name] = c.color; });
-        return map;
-    }, [allCategories]);
-
-    const expensesByCategory = useMemo(() => {
-        const grouped: Record<string, number> = {};
-        currentMonthTransactions
-            .filter(t => t.type === 'debito')
-            .forEach(t => {
-                const catName = t.category?.name || 'Sem Categoria';
-                grouped[catName] = (grouped[catName] || 0) + t.value;
-            });
-        return Object.entries(grouped).map(([name, value]) => ({
-            name,
-            value: value / 100,
-            fill: categoryColorMap[name] || '#757575',
-        }));
-    }, [currentMonthTransactions, categoryColorMap]);
 
     return (
         <div>

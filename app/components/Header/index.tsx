@@ -44,7 +44,7 @@ const Header = () => {
                         <MenuIcon />
                     </IconButton>
                     <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                        Bem vindo(a)! Vamos cuidar das suas finanças?
+                        Olá {user?.firstName || ''}! Vamos cuidar das suas finanças?
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                         <Typography variant="body2">

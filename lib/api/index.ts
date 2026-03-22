@@ -7,5 +7,5 @@ export { categoriesApi } from './categories';
 
 export type { RegisterData, LoginData, LoginResponse, User, Category, UserPreferences, ResetPasswordData } from './auth';
 export type { UpdateUserData } from './users';
-export type { Transaction, TransactionCategory, TransactionsResponse, TransactionFilters, MonthlySummaryItem, CreateTransactionData, UpdateTransactionData, ImportResult, BankOption, ImportPreviewRow, ImportPreviewResponse, ImportConfirmTransaction, CustomMapping, BulkActionResult, BulkUpdateData } from './transactions';
+export type { Transaction, TransactionCategory, TransactionsResponse, TransactionFilters, MonthlySummaryItem, CreateTransactionData, UpdateTransactionData, ImportResult, BankOption, ImportPreviewRow, ImportPreviewResponse, ImportConfirmTransaction, CustomMapping, DashboardData, BulkActionResult, BulkUpdateData } from './transactions';
 export type { CreateCategoryData, UpdateCategoryData } from './categories';
