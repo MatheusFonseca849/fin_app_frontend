@@ -1,44 +1,28 @@
 'use client'
 
-import { Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, IconButton, InputAdornment, List, ListItem, TextField, Typography } from "@mui/material"
+import { Box, Card, CircularProgress, Grid, IconButton, InputAdornment, List, ListItem, TextField, Typography } from "@mui/material"
 import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { PieChart, Pie, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, XAxis, YAxis } from "recharts"
+import { LazyPieChart as PieChart, LazyBarChart as BarChart, Pie, Tooltip, ResponsiveContainer, Legend, Bar, XAxis, YAxis } from "@/lib/components/LazyRecharts"
 import TransactionCard from "@/app/components/TransactionCard"
-import ModalComponent from "@/app/components/ModalComponent"
-import AddTransaction, { initialTransactionFormData, TransactionFormData } from "@/app/components/AddTransactionModal"
-import { useCallback, useEffect, useState, useMemo } from "react"
+import TransactionCrudDialogs from "@/app/components/TransactionCrudDialogs"
+import { useCallback, useEffect, useState } from "react"
 import { transactionsApi, usersApi } from "@/lib/api"
-import type { Transaction, DashboardData } from "@/lib/api"
+import type { DashboardData } from "@/lib/api"
 import { useAuth } from "@/lib/contexts/AuthContext"
-import { useCategories } from "@/lib/contexts/CategoriesContext"
+import { useTransactionCrud } from "@/lib/hooks/useTransactionCrud"
 
 const Dashboard = () => {
 
     const { user, patchUser } = useAuth();
-    const { categories: allCategories } = useCategories();
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditingBalance, setIsEditingBalance] = useState(false);
     const [balanceInput, setBalanceInput] = useState('');
     const [isSavingBalance, setIsSavingBalance] = useState(false);
 
-    // Edit state
-    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-    const [editForm, setEditForm] = useState<TransactionFormData>(initialTransactionFormData);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isSavingEdit, setIsSavingEdit] = useState(false);
-
-    // Delete state
-    const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-
-    // Payment confirmation state
-    const [payingTransaction, setPayingTransaction] = useState<Transaction | null>(null);
-    const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
-    const [isPaying, setIsPaying] = useState(false);
+    const crud = useTransactionCrud();
 
     const fetchDashboard = useCallback(async () => {
         try {
@@ -100,109 +84,18 @@ const Dashboard = () => {
 
     const handleOpenEdit = useCallback((id: string) => {
         const tx = upcomingExpenses.find(t => t._id === id);
-        if (!tx) return;
-        setEditingTransaction(tx);
-        setEditForm({
-            description: tx.description,
-            value: (tx.value / 100).toFixed(2),
-            type: tx.type,
-            category: tx.category?._id || '',
-            date: tx.timestamp.split('T')[0],
-            isPaid: tx.isPaid,
-            isRecurrent: tx.isRecurrent,
-            billingDay: tx.billingDay ? String(tx.billingDay) : '',
-        });
-        setIsEditModalOpen(true);
-    }, [upcomingExpenses]);
-
-    const handleCloseEdit = useCallback(() => {
-        setIsEditModalOpen(false);
-        setEditingTransaction(null);
-    }, []);
-
-    const handleSaveEdit = useCallback(async () => {
-        if (!editingTransaction) return;
-        setIsSavingEdit(true);
-        try {
-            const { balance } = await transactionsApi.update(editingTransaction._id, {
-                description: editForm.description,
-                value: parseFloat(editForm.value),
-                type: editForm.type,
-                category: editForm.category,
-                date: editForm.date || undefined,
-                isPaid: editForm.isPaid,
-                isRecurrent: editForm.isRecurrent || undefined,
-                billingDay: editForm.billingDay ? Number(editForm.billingDay) : undefined,
-            });
-            patchUser({ balance });
-            window.dispatchEvent(new Event('transaction-change'));
-            handleCloseEdit();
-        } catch (error) {
-            console.error('Failed to update transaction:', error);
-        } finally {
-            setIsSavingEdit(false);
-        }
-    }, [editingTransaction, editForm, patchUser, handleCloseEdit]);
+        if (tx) crud.edit.open(tx);
+    }, [upcomingExpenses, crud.edit]);
 
     const handleOpenDelete = useCallback((id: string) => {
         const tx = upcomingExpenses.find(t => t._id === id);
-        if (!tx) return;
-        setDeletingTransaction(tx);
-        setIsDeleteDialogOpen(true);
-    }, [upcomingExpenses]);
-
-    const handleCloseDelete = useCallback(() => {
-        setIsDeleteDialogOpen(false);
-        setDeletingTransaction(null);
-    }, []);
-
-    const handleConfirmDelete = useCallback(async () => {
-        if (!deletingTransaction) return;
-        setIsDeleting(true);
-        try {
-            const { balance } = await transactionsApi.delete(deletingTransaction._id);
-            patchUser({ balance });
-            window.dispatchEvent(new Event('transaction-change'));
-            handleCloseDelete();
-        } catch (error) {
-            console.error('Failed to delete transaction:', error);
-        } finally {
-            setIsDeleting(false);
-        }
-    }, [deletingTransaction, patchUser, handleCloseDelete]);
+        if (tx) crud.del.open(tx);
+    }, [upcomingExpenses, crud.del]);
 
     const handleOpenPayment = useCallback((id: string) => {
         const tx = upcomingExpenses.find(t => t._id === id);
-        if (!tx) return;
-        setPayingTransaction(tx);
-        setIsPayDialogOpen(true);
-    }, [upcomingExpenses]);
-
-    const handleClosePayment = useCallback(() => {
-        setIsPayDialogOpen(false);
-        setPayingTransaction(null);
-    }, []);
-
-    const handleConfirmPayment = useCallback(async () => {
-        if (!payingTransaction) return;
-        setIsPaying(true);
-        try {
-            const { balance } = await transactionsApi.update(payingTransaction._id, { isPaid: true });
-            patchUser({ balance });
-            window.dispatchEvent(new Event('transaction-change'));
-            handleClosePayment();
-        } catch (error) {
-            console.error('Failed to mark transaction as paid:', error);
-        } finally {
-            setIsPaying(false);
-        }
-    }, [payingTransaction, patchUser, handleClosePayment]);
-
-    const editCategories = useMemo(() => {
-        return allCategories
-            .filter(c => c.type === editForm.type)
-            .map(c => ({ _id: c._id, name: c.name }));
-    }, [allCategories, editForm.type]);
+        if (tx) crud.payment.open(tx);
+    }, [upcomingExpenses, crud.payment]);
 
     return (
         <div>
@@ -313,52 +206,7 @@ const Dashboard = () => {
 
             </Grid>
 
-            <ModalComponent
-                open={isEditModalOpen}
-                handleClose={handleCloseEdit}
-                title="Editar Transação"
-                layout={
-                    <AddTransaction
-                        formData={editForm}
-                        setFormData={setEditForm}
-                        categories={editCategories}
-                    />
-                }
-                action={handleSaveEdit}
-                confirmLabel={isSavingEdit ? 'Salvando...' : 'Salvar'}
-            />
-
-            <Dialog open={isPayDialogOpen} onClose={handleClosePayment}>
-                <DialogTitle>Confirmar Pagamento</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Deseja confirmar o pagamento de <strong>&ldquo;{payingTransaction?.description}&rdquo;</strong> no valor de{' '}
-                        <strong>{((payingTransaction?.value ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>?
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClosePayment} disabled={isPaying}>Cancelar</Button>
-                    <Button onClick={handleConfirmPayment} color="success" variant="contained" disabled={isPaying}>
-                        {isPaying ? <CircularProgress size={20} /> : 'Confirmar'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            <Dialog open={isDeleteDialogOpen} onClose={handleCloseDelete}>
-                <DialogTitle>Excluir Transação</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Tem certeza que deseja excluir a transação <strong>&ldquo;{deletingTransaction?.description}&rdquo;</strong> no valor de{' '}
-                        <strong>{((deletingTransaction?.value ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>?
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDelete} disabled={isDeleting}>Cancelar</Button>
-                    <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={isDeleting}>
-                        {isDeleting ? <CircularProgress size={20} /> : 'Excluir'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <TransactionCrudDialogs crud={crud} />
         </div>
     )
 }

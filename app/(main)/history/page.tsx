@@ -2,8 +2,7 @@
 
 import { Box, Card, CircularProgress, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
 import { useMemo, useState, useEffect, useCallback } from "react"
-import { ComposedChart, Bar, Line, XAxis, YAxis, Legend, ResponsiveContainer, AreaChart, Area } from "recharts"
-import { Tooltip as RechartsTooltip } from "recharts";
+import { LazyComposedChart as ComposedChart, LazyAreaChart as AreaChart, Bar, Line, XAxis, YAxis, Legend, ResponsiveContainer, Area, Tooltip as RechartsTooltip } from "@/lib/components/LazyRecharts"
 import TransactionsTable from "@/app/components/TransactionsTable";
 import { transactionsApi } from "@/lib/api"
 import type { Transaction, MonthlySummaryItem, TransactionsResponse } from "@/lib/api/transactions"
