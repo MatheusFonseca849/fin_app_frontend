@@ -39,6 +39,8 @@ const Profile = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [passwordModalOpen, setPasswordModalOpen] = useState(false);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -162,17 +164,34 @@ const Profile = () => {
 
     const handleDeleteAccount = useCallback(async () => {
         if (!user) return;
+        if (!deletePassword) {
+            setDeleteError('Informe sua senha para confirmar.');
+            return;
+        }
         setIsDeleting(true);
+        setDeleteError(null);
         try {
-            await usersApi.delete(user._id);
+            await usersApi.delete(user._id, deletePassword);
             await logout();
             router.replace('/login');
-        } catch {
-            setFeedback({ message: 'Erro ao deletar conta.', severity: 'error' });
-            setDeleteModalOpen(false);
+        } catch (err: unknown) {
+            if (
+                typeof err === 'object' &&
+                err !== null &&
+                'response' in err
+            ) {
+                const axiosErr = err as { response?: { status?: number; data?: { error?: { message?: string } } } };
+                if (axiosErr.response?.status === 401) {
+                    setDeleteError(axiosErr.response.data?.error?.message || 'Senha incorreta');
+                } else {
+                    setDeleteError(axiosErr.response?.data?.error?.message || 'Erro ao deletar conta.');
+                }
+            } else {
+                setDeleteError('Erro ao deletar conta.');
+            }
             setIsDeleting(false);
         }
-    }, [user, logout, router, setFeedback]);
+    }, [user, deletePassword, logout, router]);
 
     const handleResendEmailChange = useCallback(async () => {
         try {
@@ -279,12 +298,21 @@ const Profile = () => {
 
             <ModalComponent
                 open={deleteModalOpen}
-                handleClose={() => setDeleteModalOpen(false)}
+                handleClose={() => { setDeleteModalOpen(false); setDeletePassword(''); setDeleteError(null); }}
                 title="Deletar Conta"
                 layout={
-                    <Typography sx={{ py: 2 }}>
-                        Tem certeza que deseja deletar sua conta? Esta ação é irreversível e todos os seus dados serão perdidos.
-                    </Typography>
+                    <Stack spacing={2} sx={{ py: 2 }}>
+                        <Typography>
+                            Tem certeza que deseja deletar sua conta? Esta ação é irreversível e todos os seus dados serão perdidos.
+                        </Typography>
+                        <PasswordField
+                            label="Confirme sua senha"
+                            value={deletePassword}
+                            onChange={(e) => setDeletePassword(e.target.value)}
+                            fullWidth
+                        />
+                        {deleteError && <Alert severity="error">{deleteError}</Alert>}
+                    </Stack>
                 }
                 action={handleDeleteAccount}
                 cancelLabel="Cancelar"

@@ -1,9 +1,10 @@
 'use client'
 
-import { Box, Card, CircularProgress, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
+import { Box, Card, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
 import { useMemo, useState, useEffect, useCallback } from "react"
 import { LazyComposedChart as ComposedChart, LazyAreaChart as AreaChart, Bar, Line, XAxis, YAxis, Legend, ResponsiveContainer, Area, Tooltip as RechartsTooltip } from "@/lib/components/LazyRecharts"
 import TransactionsTable from "@/app/components/TransactionsTable";
+import type { ServerFilterValues } from "@/app/components/TransactionsTable";
 import { transactionsApi } from "@/lib/api"
 import type { Transaction, MonthlySummaryItem, TransactionsResponse } from "@/lib/api/transactions"
 
@@ -44,6 +45,7 @@ const HistoryPage = () => {
     const [tableRowsPerPage, setTableRowsPerPage] = useState(25);
     const [tableTotalPages, setTableTotalPages] = useState(1);
     const [tableTotal, setTableTotal] = useState(0);
+    const [tableFilterParams, setTableFilterParams] = useState<ServerFilterValues>({});
 
     const fetchChartData = useCallback(async () => {
         try {
@@ -60,6 +62,7 @@ const HistoryPage = () => {
             const res: TransactionsResponse = await transactionsApi.getAll({
                 page: tablePage + 1,
                 limit: tableRowsPerPage,
+                ...tableFilterParams,
             });
             setTransactions(res.data);
             setTableTotalPages(res.pagination.pages);
@@ -69,10 +72,16 @@ const HistoryPage = () => {
         } finally {
             setIsLoadingTransactions(false);
         }
-    }, [tablePage, tableRowsPerPage]);
+    }, [tablePage, tableRowsPerPage, tableFilterParams]);
 
     useEffect(() => { fetchChartData(); }, [fetchChartData]);
     useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
+
+    useEffect(() => {
+        const handler = () => { fetchChartData(); fetchTransactions(); };
+        window.addEventListener('transaction-change', handler);
+        return () => window.removeEventListener('transaction-change', handler);
+    }, [fetchChartData, fetchTransactions]);
 
     const allFormattedChartData = useMemo(() =>
         chartData.map(item => {
@@ -100,6 +109,11 @@ const HistoryPage = () => {
 
     const handleTableRowsPerPageChange = useCallback((newRowsPerPage: number) => {
         setTableRowsPerPage(newRowsPerPage);
+        setTablePage(0);
+    }, []);
+
+    const handleTableFiltersChange = useCallback((filters: ServerFilterValues) => {
+        setTableFilterParams(filters);
         setTablePage(0);
     }, []);
 
@@ -153,26 +167,20 @@ const HistoryPage = () => {
                 <Grid size={12} sx={{ p: 2 }} spacing={2}>
                     <Card sx={{ p: 2 }}>
                         <Typography variant="h4" sx={{ marginBottom: 2}}>Transações</Typography>
-                        {
-                        isLoadingTransactions ? (
-                            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300}}>
-                                <CircularProgress />
-                            </Box>
-                        ) : (
-                            <TransactionsTable
-                                transactions={transactions}
-                                onTransactionChange={fetchTransactions}
-                                serverPagination={{
-                                    page: tablePage,
-                                    pages: tableTotalPages,
-                                    total: tableTotal,
-                                    rowsPerPage: tableRowsPerPage,
-                                    onPageChange: handleTablePageChange,
-                                    onRowsPerPageChange: handleTableRowsPerPageChange,
-                                }}
-                            />
-                        )
-                        }
+                        <TransactionsTable
+                            transactions={transactions}
+                            onTransactionChange={fetchTransactions}
+                            isLoading={isLoadingTransactions}
+                            onFiltersChange={handleTableFiltersChange}
+                            serverPagination={{
+                                page: tablePage,
+                                pages: tableTotalPages,
+                                total: tableTotal,
+                                rowsPerPage: tableRowsPerPage,
+                                onPageChange: handleTablePageChange,
+                                onRowsPerPageChange: handleTableRowsPerPageChange,
+                            }}
+                        />
                     </Card>
                 </Grid>
             </Grid>

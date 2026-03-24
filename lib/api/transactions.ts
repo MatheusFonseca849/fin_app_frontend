@@ -38,6 +38,7 @@ export interface TransactionFilters {
   page?: number;
   limit?: number;
   type?: 'credito' | 'debito';
+  category?: string;
   isRecurrent?: boolean;
   isPaid?: boolean;
   startDate?: string;
@@ -161,6 +162,7 @@ export const transactionsApi = {
     if (filters?.page) params.page = String(filters.page);
     if (filters?.limit) params.limit = String(filters.limit);
     if (filters?.type) params.type = filters.type;
+    if (filters?.category) params.category = filters.category;
     if (filters?.isRecurrent !== undefined) params.isRecurrent = String(filters.isRecurrent);
     if (filters?.isPaid !== undefined) params.isPaid = String(filters.isPaid);
     if (filters?.startDate) params.startDate = filters.startDate;

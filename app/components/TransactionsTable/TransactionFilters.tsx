@@ -20,7 +20,7 @@ interface TransactionFiltersProps {
     categoryFilter: string
     recurrentOnly: boolean
     paidFilter: '' | 'true' | 'false'
-    categories: string[]
+    categories: { _id: string; name: string }[]
     onStartDateChange: (value: string) => void
     onEndDateChange: (value: string) => void
     onTypeFilterChange: (value: '' | 'Despesa' | 'Receita') => void
@@ -98,7 +98,7 @@ const TransactionFilters = ({
                 >
                     <MenuItem value="">Todas</MenuItem>
                     {categories.map((cat) => (
-                        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                        <MenuItem key={cat._id} value={cat._id}>{cat.name}</MenuItem>
                     ))}
                 </Select>
             </FormControl>
