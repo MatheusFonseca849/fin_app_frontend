@@ -49,11 +49,13 @@ const Dashboard = () => {
     const monthlyExpenseTotal = (dashboardData?.monthlyExpenses ?? 0) / 100;
     const monthlyIncomeTotal = (dashboardData?.monthlyIncome ?? 0) / 100;
     const monthlyBalance = monthlyIncomeTotal - monthlyExpenseTotal;
-    const expensesByCategory = (dashboardData?.expensesByCategory ?? []).map(c => ({
-        ...c,
-        value: c.value / 100,
-        fill: c.color,
-    }));
+    const expensesByCategory = (dashboardData?.expensesByCategory ?? [])
+        .map(c => ({
+            ...c,
+            value: c.value / 100,
+            fill: c.color,
+        }))
+        .sort((a, b) => b.value - a.value);
 
     const userBalance = (user?.balance ?? 0) / 100;
 

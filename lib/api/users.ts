@@ -40,8 +40,8 @@ export const usersApi = {
     return res.data;
   },
 
-  delete: async (userId: string) => {
-    const res = await api.delete<{ message: string }>(`/users/${userId}`);
+  delete: async (userId: string, password: string) => {
+    const res = await api.delete<{ message: string }>(`/users/${userId}`, { data: { password } });
     return res.data;
   },
 

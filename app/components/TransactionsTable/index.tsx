@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import {
+    Box,
     Card,
     Checkbox,
+    CircularProgress,
     IconButton,
     Link,
     Table,
@@ -27,6 +29,15 @@ import { useTransactionCrud } from '@/lib/hooks/useTransactionCrud'
 import TransactionFilters from './TransactionFilters'
 import BulkActionDialogs from './BulkActionDialogs'
 import TablePagination from './TablePagination'
+
+export interface ServerFilterValues {
+    type?: 'credito' | 'debito'
+    category?: string
+    isRecurrent?: boolean
+    isPaid?: boolean
+    startDate?: string
+    endDate?: string
+}
 
 interface DisplayRow {
     id: string
@@ -52,9 +63,11 @@ interface TransactionsTableProps {
     transactions: Transaction[]
     onTransactionChange?: () => void
     serverPagination?: ServerPaginationProps
+    isLoading?: boolean
+    onFiltersChange?: (filters: ServerFilterValues) => void
 }
 
-const TransactionsTable = ({ transactions, onTransactionChange, serverPagination }: TransactionsTableProps) => {
+const TransactionsTable = ({ transactions, onTransactionChange, serverPagination, isLoading, onFiltersChange }: TransactionsTableProps) => {
     const { patchUser } = useAuth()
     const { categories: allCategories } = useCategories()
 
@@ -119,11 +132,16 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     )
 
     const categories = useMemo(
-        () => allCategories.map(c => c.name).sort(),
+        () => allCategories
+            .map(c => ({ _id: c._id, name: c.name }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
         [allCategories]
     )
 
     const filteredRows = useMemo(() => {
+        // When using server pagination, data is already filtered server-side
+        if (serverPagination) return rows
+
         let result = rows
 
         if (startDate) {
@@ -136,7 +154,8 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
             result = result.filter((r) => r.type === typeFilter)
         }
         if (categoryFilter) {
-            result = result.filter((r) => r.category === categoryFilter)
+            const catName = allCategories.find(c => c._id === categoryFilter)?.name
+            if (catName) result = result.filter((r) => r.category === catName)
         }
         if (recurrentOnly) {
             result = result.filter((r) => r.isRecurrent)
@@ -147,7 +166,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
         }
 
         return result.sort((a, b) => b.date.localeCompare(a.date))
-    }, [rows, startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter])
+    }, [rows, serverPagination, startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, allCategories])
 
     const totalPages = serverPagination
         ? serverPagination.pages
@@ -155,6 +174,25 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     const paginatedRows = serverPagination
         ? filteredRows
         : filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
+    // Ref to hold current filter values for stable emitFilters callback
+    const filterValuesRef = useRef({ startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter })
+    filterValuesRef.current = { startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter }
+
+    const emitFilters = useCallback((overrides: Partial<typeof filterValuesRef.current>) => {
+        if (!onFiltersChange) return
+        const f = { ...filterValuesRef.current, ...overrides }
+        const filters: ServerFilterValues = {}
+        if (f.startDate) filters.startDate = f.startDate
+        if (f.endDate) filters.endDate = f.endDate
+        if (f.typeFilter === 'Despesa') filters.type = 'debito'
+        else if (f.typeFilter === 'Receita') filters.type = 'credito'
+        if (f.categoryFilter) filters.category = f.categoryFilter
+        if (f.recurrentOnly) filters.isRecurrent = true
+        if (f.paidFilter === 'true') filters.isPaid = true
+        else if (f.paidFilter === 'false') filters.isPaid = false
+        onFiltersChange(filters)
+    }, [onFiltersChange])
 
     const handleFilterChange = () => {
         setPage(0)
@@ -279,12 +317,12 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
 
     const hasEnabledBulkFields = Object.values(bulkUpdateFields).some(v => v)
 
-    const handleFilterStartDate = useCallback((v: string) => { setStartDate(v); handleFilterChange() }, [handleFilterChange])
-    const handleFilterEndDate = useCallback((v: string) => { setEndDate(v); handleFilterChange() }, [handleFilterChange])
-    const handleFilterType = useCallback((v: '' | 'Despesa' | 'Receita') => { setTypeFilter(v); handleFilterChange() }, [handleFilterChange])
-    const handleFilterCategory = useCallback((v: string) => { setCategoryFilter(v); handleFilterChange() }, [handleFilterChange])
-    const handleFilterRecurrent = useCallback((v: boolean) => { setRecurrentOnly(v); handleFilterChange() }, [handleFilterChange])
-    const handleFilterPaid = useCallback((v: '' | 'true' | 'false') => { setPaidFilter(v); handleFilterChange() }, [handleFilterChange])
+    const handleFilterStartDate = useCallback((v: string) => { setStartDate(v); handleFilterChange(); emitFilters({ startDate: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterEndDate = useCallback((v: string) => { setEndDate(v); handleFilterChange(); emitFilters({ endDate: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterType = useCallback((v: '' | 'Despesa' | 'Receita') => { setTypeFilter(v); handleFilterChange(); emitFilters({ typeFilter: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterCategory = useCallback((v: string) => { setCategoryFilter(v); handleFilterChange(); emitFilters({ categoryFilter: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterRecurrent = useCallback((v: boolean) => { setRecurrentOnly(v); handleFilterChange(); emitFilters({ recurrentOnly: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterPaid = useCallback((v: '' | 'true' | 'false') => { setPaidFilter(v); handleFilterChange(); emitFilters({ paidFilter: v }) }, [handleFilterChange, emitFilters])
 
     const handleBulkUpdateFieldToggle = useCallback((field: string, checked: boolean) => {
         setBulkUpdateFields(prev => ({ ...prev, [field]: checked }))
@@ -325,6 +363,12 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
             />
 
             {/* Table */}
+            <Box sx={{ position: 'relative' }}>
+            {isLoading && (
+                <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.7)', zIndex: 1 }}>
+                    <CircularProgress />
+                </Box>
+            )}
             <TableContainer>
                 <Table stickyHeader>
                     <TableHead sx={{ '& .MuiTableCell-head': { backgroundColor: 'primary.main', color: 'white' } }}>
@@ -429,6 +473,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                     </TableBody>
                 </Table>
             </TableContainer>
+            </Box>
 
             {/* Pagination */}
             <TablePagination
