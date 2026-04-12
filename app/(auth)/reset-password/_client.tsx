@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { authApi } from '@/lib/api';
+import { extractErrorMessage } from '@/lib/utils/extractError';
+import { validatePassword } from '@/lib/utils/validatePassword';
 import PasswordField from "@/app/components/PasswordField";
 
 const ResetPassword = () => {
@@ -35,8 +37,9 @@ const ResetPassword = () => {
             return;
         }
 
-        if (password.length < 6) {
-            setMessage('A senha deve ter no mínimo 6 caracteres.');
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+            setMessage(passwordError);
             setStatus('error');
             return;
         }
@@ -47,17 +50,7 @@ const ResetPassword = () => {
             setMessage(result.message);
             setStatus('success');
         } catch (err: unknown) {
-            if (
-                typeof err === 'object' &&
-                err !== null &&
-                'response' in err
-            ) {
-                const axiosErr = err as { response?: { data?: { error?: { message?: string; details?: Array<{ message?: string }> } } } };
-                const errorData = axiosErr.response?.data?.error;
-                setMessage(errorData?.details?.[0]?.message || errorData?.message || 'Erro ao redefinir senha.');
-            } else {
-                setMessage('Erro ao redefinir senha.');
-            }
+            setMessage(extractErrorMessage(err, 'Erro ao redefinir senha.'));
             setStatus('error');
         } finally {
             setIsLoading(false);

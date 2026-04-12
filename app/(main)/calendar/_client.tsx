@@ -53,12 +53,8 @@ const Calendar = () => {
     const fetchTransactions = useCallback(async () => {
         if (!dateRange) return;
         try {
-            const res = await transactionsApi.getAll({
-                limit: 200,
-                startDate: dateRange.start,
-                endDate: dateRange.end,
-            });
-            setTransactions(res.data);
+            const { data } = await transactionsApi.getCalendar(dateRange.start, dateRange.end);
+            setTransactions(data);
         } catch (error) {
             console.error('Failed to fetch transactions:', error);
         }
@@ -73,7 +69,7 @@ const Calendar = () => {
     }, [fetchTransactions]);
 
     const handleDatesSet = useCallback((arg: { startStr: string; endStr: string }) => {
-        setDateRange({ start: arg.startStr, end: arg.endStr });
+        setDateRange({ start: arg.startStr.slice(0, 10), end: arg.endStr.slice(0, 10) });
     }, []);
 
     const events = useMemo(() =>
@@ -132,7 +128,7 @@ const Calendar = () => {
                 category: editForm.category,
                 date: editForm.date || undefined,
                 isPaid: editForm.isPaid,
-                isRecurrent: editForm.isRecurrent || undefined,
+                isRecurrent: editForm.isRecurrent,
                 billingDay: editForm.billingDay ? Number(editForm.billingDay) : undefined,
             });
             patchUser({ balance });

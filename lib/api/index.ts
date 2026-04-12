@@ -1,5 +1,5 @@
 export { default as api } from './client';
-export { setAccessToken, getAccessToken } from './client';
+export { setAccessToken } from './client';
 export { authApi } from './auth';
 export { usersApi } from './users';
 export { transactionsApi } from './transactions';

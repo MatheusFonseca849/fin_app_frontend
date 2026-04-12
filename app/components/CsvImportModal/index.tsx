@@ -34,7 +34,9 @@ import type {
   CustomMapping,
 } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { extractErrorMessage } from '@/lib/utils/extractError';
 import { useCategories } from '@/lib/contexts/CategoriesContext';
+import { List, type RowComponentProps } from 'react-window';
 
 type Step = 'select' | 'mapping' | 'preview';
 
@@ -55,6 +57,103 @@ const modalBoxSx = {
   boxShadow: 24,
   display: 'flex',
   flexDirection: 'column',
+};
+
+const ROW_HEIGHT = 52;
+
+interface PreviewRowProps {
+  rows: ImportPreviewRow[];
+  updateRow: (index: number, field: keyof ImportPreviewRow, value: string | number | boolean) => void;
+  updateRowCategory: (index: number, categoryId: string) => void;
+  deleteRow: (index: number) => void;
+  categoryOptions: { _id: string; name: string; type: string }[];
+}
+
+const PreviewRowRenderer = ({ index, style, rows, updateRow, updateRowCategory, deleteRow, categoryOptions }: RowComponentProps<PreviewRowProps>) => {
+  const row = rows[index];
+
+  return (
+    <Box
+      style={style}
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        px: 1,
+        borderBottom: 1,
+        borderColor: 'divider',
+        bgcolor: index % 2 === 0 ? 'transparent' : 'action.hover',
+      }}
+    >
+      <Box sx={{ width: 145, flexShrink: 0 }}>
+        <TextField
+          type="date"
+          size="small"
+          value={row.date}
+          onChange={(e) => updateRow(index, 'date', e.target.value)}
+          fullWidth
+        />
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 150 }}>
+        <TextField
+          size="small"
+          value={row.description}
+          onChange={(e) => updateRow(index, 'description', e.target.value)}
+          fullWidth
+        />
+      </Box>
+      <Box sx={{ width: 110, flexShrink: 0 }}>
+        <TextField
+          size="small"
+          type="number"
+          value={row.value}
+          onChange={(e) => updateRow(index, 'value', parseFloat(e.target.value) || 0)}
+          fullWidth
+          inputProps={{ step: '0.01', min: '0.01' }}
+        />
+      </Box>
+      <Box sx={{ width: 120, flexShrink: 0 }}>
+        <Select
+          size="small"
+          value={row.type}
+          onChange={(e) => updateRow(index, 'type', e.target.value)}
+          fullWidth
+        >
+          <MenuItem value="debito">Despesa</MenuItem>
+          <MenuItem value="credito">Receita</MenuItem>
+        </Select>
+      </Box>
+      <Box sx={{ width: 170, flexShrink: 0 }}>
+        <Select
+          size="small"
+          value={row.categoryId}
+          onChange={(e) => updateRowCategory(index, e.target.value)}
+          fullWidth
+        >
+          {categoryOptions.map(c => (
+            <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
+          ))}
+        </Select>
+      </Box>
+      <Box sx={{ width: 50, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+        <Checkbox
+          checked={row.isPaid}
+          onChange={(e) => updateRow(index, 'isPaid', e.target.checked)}
+          size="small"
+        />
+      </Box>
+      <Box sx={{ width: 40, flexShrink: 0 }}>
+        <Button
+          size="small"
+          color="error"
+          onClick={() => deleteRow(index)}
+          sx={{ minWidth: 0, px: 1 }}
+        >
+          ✕
+        </Button>
+      </Box>
+    </Box>
+  );
 };
 
 const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
@@ -175,8 +274,7 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
       setPreviewErrors(errors);
       setStep('preview');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao processar CSV';
-      setError(msg);
+      setError(extractErrorMessage(err, 'Erro ao processar CSV'));
     } finally {
       setIsLoadingPreview(false);
     }
@@ -262,6 +360,14 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
     setPreviewRows(prev => prev.filter((_, i) => i !== index));
   }, []);
 
+  const rowProps = useMemo<PreviewRowProps>(() => ({
+    rows: previewRows,
+    updateRow,
+    updateRowCategory,
+    deleteRow,
+    categoryOptions,
+  }), [previewRows, updateRow, updateRowCategory, deleteRow, categoryOptions]);
+
   // Confirm import
   const handleConfirm = useCallback(async () => {
     if (previewRows.length === 0) return;
@@ -274,7 +380,7 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
         value: row.value,
         type: row.type,
         categoryId: row.categoryId,
-        date: row.date,
+        date: row.timestamp,
         isPaid: row.isPaid,
       }));
 
@@ -288,8 +394,7 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
         window.dispatchEvent(new Event('transaction-change'));
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao importar transações';
-      setError(msg);
+      setError(extractErrorMessage(err, 'Erro ao importar transações'));
     } finally {
       setIsConfirming(false);
     }
@@ -471,94 +576,26 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     {previewRows.length} transações encontradas. Revise e edite antes de confirmar.
                   </Typography>
-                  <TableContainer sx={{ maxHeight: 400 }}>
-                    <Table size="small" stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Data</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Descrição</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Valor</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Tipo</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Categoria</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Pago</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }} />
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {previewRows.map((row, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>
-                              <TextField
-                                type="date"
-                                size="small"
-                                value={row.date}
-                                onChange={(e) => updateRow(idx, 'date', e.target.value)}
-                                sx={{ minWidth: 130 }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                size="small"
-                                value={row.description}
-                                onChange={(e) => updateRow(idx, 'description', e.target.value)}
-                                sx={{ minWidth: 180 }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <TextField
-                                size="small"
-                                type="number"
-                                value={row.value}
-                                onChange={(e) => updateRow(idx, 'value', parseFloat(e.target.value) || 0)}
-                                sx={{ minWidth: 100 }}
-                                inputProps={{ step: '0.01', min: '0.01' }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                size="small"
-                                value={row.type}
-                                onChange={(e) => updateRow(idx, 'type', e.target.value)}
-                                sx={{ minWidth: 100 }}
-                              >
-                                <MenuItem value="debito">Despesa</MenuItem>
-                                <MenuItem value="credito">Receita</MenuItem>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                size="small"
-                                value={row.categoryId}
-                                onChange={(e) => updateRowCategory(idx, e.target.value)}
-                                sx={{ minWidth: 150 }}
-                              >
-                                {categoryOptions.map(c => (
-                                  <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
-                                ))}
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Checkbox
-                                checked={row.isPaid}
-                                onChange={(e) => updateRow(idx, 'isPaid', e.target.checked)}
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                size="small"
-                                color="error"
-                                onClick={() => deleteRow(idx)}
-                                sx={{ minWidth: 0, px: 1 }}
-                              >
-                                ✕
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                  <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+                    {/* Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 1, borderBottom: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
+                      <Typography variant="body2" sx={{ width: 145, flexShrink: 0, fontWeight: 600 }}>Data</Typography>
+                      <Typography variant="body2" sx={{ flex: 1, minWidth: 150, fontWeight: 600 }}>Descrição</Typography>
+                      <Typography variant="body2" sx={{ width: 110, flexShrink: 0, fontWeight: 600 }}>Valor</Typography>
+                      <Typography variant="body2" sx={{ width: 120, flexShrink: 0, fontWeight: 600 }}>Tipo</Typography>
+                      <Typography variant="body2" sx={{ width: 170, flexShrink: 0, fontWeight: 600 }}>Categoria</Typography>
+                      <Typography variant="body2" sx={{ width: 50, flexShrink: 0, fontWeight: 600, textAlign: 'center' }}>Pago</Typography>
+                      <Box sx={{ width: 40, flexShrink: 0 }} />
+                    </Box>
+                    {/* Virtualized rows */}
+                    <List
+                      rowComponent={PreviewRowRenderer}
+                      rowCount={previewRows.length}
+                      rowHeight={ROW_HEIGHT}
+                      rowProps={rowProps}
+                      style={{ height: Math.min(400, previewRows.length * ROW_HEIGHT) }}
+                    />
+                  </Box>
                 </>
               )}
             </>

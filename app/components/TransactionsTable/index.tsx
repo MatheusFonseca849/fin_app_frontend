@@ -1,25 +1,19 @@
 'use client'
 
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import {
     Box,
     Card,
     Checkbox,
     CircularProgress,
-    IconButton,
-    Link,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    Tooltip,
     Typography,
 } from '@mui/material'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
-import CheckIcon from '@mui/icons-material/Check'
 import { transactionsApi } from '@/lib/api'
 import type { Transaction, BulkUpdateData } from '@/lib/api'
 import { useAuth } from '@/lib/contexts/AuthContext'
@@ -29,6 +23,8 @@ import { useTransactionCrud } from '@/lib/hooks/useTransactionCrud'
 import TransactionFilters from './TransactionFilters'
 import BulkActionDialogs from './BulkActionDialogs'
 import TablePagination from './TablePagination'
+import TableRowItem from './TableRowItem'
+import type { DisplayRow } from './TableRowItem'
 
 export interface ServerFilterValues {
     type?: 'credito' | 'debito'
@@ -37,17 +33,6 @@ export interface ServerFilterValues {
     isPaid?: boolean
     startDate?: string
     endDate?: string
-}
-
-interface DisplayRow {
-    id: string
-    date: string
-    description: string
-    amount: number
-    type: 'Despesa' | 'Receita'
-    category: string
-    isRecurrent: boolean
-    isPaid: boolean
 }
 
 interface ServerPaginationProps {
@@ -118,16 +103,20 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     const [isBulkUpdateConfirmOpen, setIsBulkUpdateConfirmOpen] = useState(false)
 
     const rows: DisplayRow[] = useMemo(() =>
-        transactions.map(tx => ({
-            id: tx._id,
-            date: tx.timestamp.split('T')[0],
-            description: tx.description,
-            amount: tx.value / 100,
-            type: (tx.type === 'debito' ? 'Despesa' : 'Receita') as 'Despesa' | 'Receita',
-            category: tx.category?.name || '—',
-            isRecurrent: tx.isRecurrent,
-            isPaid: tx.isPaid,
-        })),
+        transactions.map(tx => {
+            const date = tx.timestamp.split('T')[0]
+            return {
+                id: tx._id,
+                date,
+                formattedDate: new Date(date + 'T00:00:00').toLocaleDateString('pt-BR'),
+                description: tx.description,
+                amount: tx.value / 100,
+                type: (tx.type === 'debito' ? 'Despesa' : 'Receita') as 'Despesa' | 'Receita',
+                category: tx.category?.name || '—',
+                isRecurrent: tx.isRecurrent,
+                isPaid: tx.isPaid,
+            }
+        }),
         [transactions]
     )
 
@@ -179,24 +168,33 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     const filterValuesRef = useRef({ startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter })
     filterValuesRef.current = { startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter }
 
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    }, [])
+
     const emitFilters = useCallback((overrides: Partial<typeof filterValuesRef.current>) => {
         if (!onFiltersChange) return
-        const f = { ...filterValuesRef.current, ...overrides }
-        const filters: ServerFilterValues = {}
-        if (f.startDate) filters.startDate = f.startDate
-        if (f.endDate) filters.endDate = f.endDate
-        if (f.typeFilter === 'Despesa') filters.type = 'debito'
-        else if (f.typeFilter === 'Receita') filters.type = 'credito'
-        if (f.categoryFilter) filters.category = f.categoryFilter
-        if (f.recurrentOnly) filters.isRecurrent = true
-        if (f.paidFilter === 'true') filters.isPaid = true
-        else if (f.paidFilter === 'false') filters.isPaid = false
-        onFiltersChange(filters)
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+            const f = { ...filterValuesRef.current, ...overrides }
+            const filters: ServerFilterValues = {}
+            if (f.startDate) filters.startDate = f.startDate
+            if (f.endDate) filters.endDate = f.endDate
+            if (f.typeFilter === 'Despesa') filters.type = 'debito'
+            else if (f.typeFilter === 'Receita') filters.type = 'credito'
+            if (f.categoryFilter) filters.category = f.categoryFilter
+            if (f.recurrentOnly) filters.isRecurrent = true
+            if (f.paidFilter === 'true') filters.isPaid = true
+            else if (f.paidFilter === 'false') filters.isPaid = false
+            onFiltersChange(filters)
+        }, 400)
     }, [onFiltersChange])
 
-    const handleFilterChange = () => {
+    const handleFilterChange = useCallback(() => {
         setPage(0)
-    }
+    }, [])
 
     const notifyBulkChange = useCallback((balance: number) => {
         patchUser({ balance })
@@ -219,6 +217,14 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
         const tx = transactions.find(t => t._id === row.id)
         if (tx) crud.payment.open(tx)
     }, [transactions, crud.payment])
+
+    const handleToggleExpand = useCallback((id: string) => {
+        setExpandedDescs(prev => new Set(prev).add(id))
+    }, [])
+
+    const handleCollapseExpand = useCallback((id: string) => {
+        setExpandedDescs(prev => { const next = new Set(prev); next.delete(id); return next })
+    }, [])
 
     // Bulk update category options (depends on selected type in bulk form)
     const bulkUpdateCategories = useMemo(() => {
@@ -402,72 +408,18 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                             </TableRow>
                         ) : (
                             paginatedRows.map((row) => (
-                                <TableRow key={row.id} hover selected={selectedIds.has(row.id)}>
-                                    <TableCell padding="checkbox">
-                                        <Checkbox
-                                            checked={selectedIds.has(row.id)}
-                                            onChange={() => toggleSelect(row.id)}
-                                            size="small"
-                                        />
-                                    </TableCell>
-                                    <TableCell>{new Date(row.date + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
-                                    <TableCell sx={{ maxWidth: 350 }}>
-                                        {row.description.length <= 100 ? (
-                                            row.description
-                                        ) : expandedDescs.has(row.id) ? (
-                                            <>
-                                                {row.description}{' '}
-                                                <Link
-                                                    component="button"
-                                                    variant="body2"
-                                                    onClick={() => setExpandedDescs(prev => { const next = new Set(prev); next.delete(row.id); return next })}
-                                                    sx={{ verticalAlign: 'baseline', whiteSpace: 'nowrap' }}
-                                                >
-                                                    ver menos
-                                                </Link>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {row.description.slice(0, 100)}&hellip;{' '}
-                                                <Link
-                                                    component="button"
-                                                    variant="body2"
-                                                    onClick={() => setExpandedDescs(prev => new Set(prev).add(row.id))}
-                                                    sx={{ verticalAlign: 'baseline', whiteSpace: 'nowrap' }}
-                                                >
-                                                    ver mais
-                                                </Link>
-                                            </>
-                                        )}
-                                    </TableCell>
-                                    <TableCell sx={{ color: row.type === 'Despesa' ? 'error.main' : 'success.main', fontWeight: 500 }}>
-                                        {row.type === 'Despesa' ? '- ' : '+ '}
-                                        R$ {row.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </TableCell>
-                                    <TableCell>{row.type}</TableCell>
-                                    <TableCell>{row.category || '—'}</TableCell>
-                                    <TableCell>{row.isRecurrent ? 'Sim' : 'Não'}</TableCell>
-                                    <TableCell>{row.type === 'Receita' ? '' : row.isPaid ? 'Sim' : 'Não'}</TableCell>
-                                    <TableCell>
-                                        <Tooltip title="Editar">
-                                            <IconButton size="small" onClick={() => handleOpenEdit(row)}>
-                                                <EditIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                        <Tooltip title="Excluir">
-                                            <IconButton size="small" onClick={() => handleOpenDelete(row)}>
-                                                <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                        {row.type === 'Despesa' && !row.isPaid && (
-                                            <Tooltip title="Marcar como pago">
-                                                <IconButton size="small" color="success" onClick={() => handleOpenPayment(row)}>
-                                                    <CheckIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
+                                <TableRowItem
+                                    key={row.id}
+                                    row={row}
+                                    isSelected={selectedIds.has(row.id)}
+                                    isExpanded={expandedDescs.has(row.id)}
+                                    onToggleSelect={toggleSelect}
+                                    onToggleExpand={handleToggleExpand}
+                                    onCollapseExpand={handleCollapseExpand}
+                                    onEdit={handleOpenEdit}
+                                    onDelete={handleOpenDelete}
+                                    onPayment={handleOpenPayment}
+                                />
                             ))
                         )}
                     </TableBody>

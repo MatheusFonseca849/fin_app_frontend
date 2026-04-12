@@ -1,9 +1,10 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { authApi, usersApi } from '@/lib/api';
-import { setAccessToken } from '@/lib/api/client';
+import { setAccessToken, setOnAuthFailure } from '@/lib/api/client';
 import type { User, RegisterData, LoginData, UpdateUserData } from '@/lib/api';
+import { extractError } from '@/lib/utils/extractError';
 
 interface AuthState {
   user: User | null;
@@ -32,6 +33,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const isAuthenticated = !!user;
 
+  const userIdRef = useRef<string | null>(null);
+  userIdRef.current = user?._id ?? null;
+
   const clearError = useCallback(() => setError(null), []);
 
   const refreshUser = useCallback(async () => {
@@ -41,6 +45,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch {
       setUser(null);
     }
+  }, []);
+
+  // Register interceptor callback so a failed refresh clears state via React
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      setAccessToken(null);
+      setUser(null);
+    });
   }, []);
 
   // Silent auth check on mount — uses httpOnly refresh cookie
@@ -103,10 +115,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const updateUser = useCallback(async (data: UpdateUserData): Promise<string | undefined> => {
-    if (!user) return undefined;
+    const userId = userIdRef.current;
+    if (!userId) return undefined;
     setError(null);
     try {
-      const updated = await usersApi.update(user._id, data);
+      const updated = await usersApi.update(userId, data);
       const { message, ...userData } = updated;
       setUser(userData);
       return message;
@@ -115,7 +128,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(message);
       throw new ApiError(message, status);
     }
-  }, [user]);
+  }, []);
 
   const patchUser = useCallback((partial: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...partial } : prev));
@@ -171,21 +184,4 @@ export class ApiError extends Error {
     this.status = status;
     this.name = 'ApiError';
   }
-}
-
-function extractError(err: unknown, fallback: string): { message: string; status: number } {
-  if (
-    typeof err === 'object' &&
-    err !== null &&
-    'response' in err
-  ) {
-    const axiosErr = err as { response?: { status?: number; data?: { error?: { message?: string; details?: Array<{ message?: string }> } } } };
-    const errorData = axiosErr.response?.data?.error;
-    const detailMessage = errorData?.details?.[0]?.message;
-    return {
-      message: detailMessage || errorData?.message || fallback,
-      status: axiosErr.response?.status || 500,
-    };
-  }
-  return { message: fallback, status: 500 };
 }

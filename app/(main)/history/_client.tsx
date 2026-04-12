@@ -2,7 +2,10 @@
 
 import { Box, Card, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
 import { useMemo, useState, useEffect, useCallback } from "react"
-import { LazyComposedChart as ComposedChart, LazyAreaChart as AreaChart, Bar, Line, XAxis, YAxis, Legend, ResponsiveContainer, Area, Tooltip as RechartsTooltip } from "@/lib/components/LazyRecharts"
+import dynamic from 'next/dynamic'
+
+const HistoryComposedChart = dynamic(() => import('@/app/components/charts/HistoryComposedChart'), { ssr: false })
+const HistoryAreaChart = dynamic(() => import('@/app/components/charts/HistoryAreaChart'), { ssr: false })
 import TransactionsTable from "@/app/components/TransactionsTable";
 import type { ServerFilterValues } from "@/app/components/TransactionsTable";
 import { transactionsApi } from "@/lib/api"
@@ -137,29 +140,13 @@ const HistoryPage = () => {
                 <Grid size={6} sx={{ p: 2 }} spacing={2}>
                     <Card sx={{ p: 2 }}>
                         <Typography variant="h4" sx={{ marginBottom: 2}}>Despesas x Receitas</Typography>
-                        <ResponsiveContainer width="100%" height={350}>
-                            <ComposedChart data={filteredChartData}>
-                                <XAxis dataKey="month" />
-                                <YAxis />
-                                <RechartsTooltip />
-                                <Legend />
-                                <Bar dataKey="despesas" name="Despesas" fill="#fb6c1b" />
-                                <Line type="monotone" dataKey="receitas" name="Receitas" stroke="#1fcf25" strokeWidth={2} />
-                            </ComposedChart>
-                        </ResponsiveContainer>
+                        <HistoryComposedChart data={filteredChartData} />
                     </Card>
                 </Grid>
                 <Grid size={6} sx={{ p: 2 }}>
                     <Card sx={{ p: 2 }}>
                         <Typography variant="h4" sx={{ marginBottom: 2}}>Histórico de Saldo</Typography>
-                        <ResponsiveContainer width="100%" height={350}>
-                            <AreaChart data={filteredChartData}>
-                                <XAxis dataKey="month" />
-                                <YAxis />
-                                <RechartsTooltip />
-                                <Area type="monotone" dataKey="saldo" name="Saldo" stroke="#1fcf25" fill="#f1fded" strokeWidth={2} />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        <HistoryAreaChart data={filteredChartData} />
                     </Card>
                 </Grid>
             </Grid>

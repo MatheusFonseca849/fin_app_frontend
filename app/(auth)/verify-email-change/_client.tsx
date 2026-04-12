@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { authApi } from '@/lib/api';
+import { extractErrorMessage } from '@/lib/utils/extractError';
 
 const VerifyEmailChange = () => {
     const searchParams = useSearchParams();
@@ -33,17 +34,7 @@ const VerifyEmailChange = () => {
                 setMessage(result.message);
             } catch (err: unknown) {
                 setStatus('error');
-                if (
-                    typeof err === 'object' &&
-                    err !== null &&
-                    'response' in err
-                ) {
-                    const axiosErr = err as { response?: { data?: { error?: { message?: string; details?: Array<{ message?: string }> } } } };
-                    const errorData = axiosErr.response?.data?.error;
-                    setMessage(errorData?.details?.[0]?.message || errorData?.message || 'Erro ao confirmar alteração de email.');
-                } else {
-                    setMessage('Erro ao confirmar alteração de email.');
-                }
+                setMessage(extractErrorMessage(err, 'Erro ao confirmar alteração de email.'));
             }
         };
 

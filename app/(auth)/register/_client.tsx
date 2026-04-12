@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from '@/lib/contexts/AuthContext';
 import PasswordField from "@/app/components/PasswordField";
+import { validatePassword } from '@/lib/utils/validatePassword';
 
 const Register = () => {
 
@@ -25,6 +26,12 @@ const Register = () => {
 
         if (password !== confirmPassword) {
             setLocalError('As senhas não coincidem.');
+            return;
+        }
+
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+            setLocalError(passwordError);
             return;
         }
 

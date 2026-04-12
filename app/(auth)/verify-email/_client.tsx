@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { authApi } from '@/lib/api';
+import { extractErrorMessage } from '@/lib/utils/extractError';
 
 const VerifyEmail = () => {
     const searchParams = useSearchParams();
@@ -35,17 +36,7 @@ const VerifyEmail = () => {
                 setMessage(result.message);
             } catch (err: unknown) {
                 setStatus('error');
-                if (
-                    typeof err === 'object' &&
-                    err !== null &&
-                    'response' in err
-                ) {
-                    const axiosErr = err as { response?: { data?: { error?: { message?: string; details?: Array<{ message?: string }> } } } };
-                    const errorData = axiosErr.response?.data?.error;
-                    setMessage(errorData?.details?.[0]?.message || errorData?.message || 'Erro ao verificar email.');
-                } else {
-                    setMessage('Erro ao verificar email.');
-                }
+                setMessage(extractErrorMessage(err, 'Erro ao verificar email.'));
             }
         };
 
@@ -60,17 +51,7 @@ const VerifyEmail = () => {
             const result = await authApi.resendVerification(email);
             setResendMessage(result.message);
         } catch (err: unknown) {
-            if (
-                typeof err === 'object' &&
-                err !== null &&
-                'response' in err
-            ) {
-                const axiosErr = err as { response?: { data?: { error?: { message?: string; details?: Array<{ message?: string }> } } } };
-                const errorData = axiosErr.response?.data?.error;
-                setResendMessage(errorData?.details?.[0]?.message || errorData?.message || 'Erro ao reenviar email. Tente novamente.');
-            } else {
-                setResendMessage('Erro ao reenviar email. Tente novamente.');
-            }
+            setResendMessage(extractErrorMessage(err, 'Erro ao reenviar email. Tente novamente.'));
         } finally {
             setResendLoading(false);
         }

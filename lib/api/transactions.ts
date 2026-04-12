@@ -58,7 +58,7 @@ export interface CreateTransactionData {
   value: number;
   type: 'credito' | 'debito';
   category: string;
-  date?: string;
+  date: string;
   isRecurrent?: boolean;
   billingDay?: number;
   isPaid?: boolean;
@@ -169,6 +169,13 @@ export const transactionsApi = {
     if (filters?.endDate) params.endDate = filters.endDate;
 
     const res = await api.get<TransactionsResponse>('/records', { params });
+    return res.data;
+  },
+
+  getCalendar: async (startDate: string, endDate: string) => {
+    const res = await api.get<{ data: Transaction[] }>('/records/calendar', {
+      params: { startDate, endDate },
+    });
     return res.data;
   },
 

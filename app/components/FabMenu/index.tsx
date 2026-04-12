@@ -54,7 +54,7 @@ const FabMenu = () => {
     };
 
     const handleSubmitTransaction = useCallback(async () => {
-        if (!transactionForm.description || !transactionForm.value || !transactionForm.category) return;
+        if (!transactionForm.description || !transactionForm.value || !transactionForm.category || !transactionForm.date) return;
         setIsSubmitting(true);
         setTransactionFeedback(null);
         try {
@@ -64,9 +64,9 @@ const FabMenu = () => {
                 value: valueInReais,
                 type: transactionForm.type,
                 category: transactionForm.category,
-                date: transactionForm.date || undefined,
-                isPaid: transactionForm.isPaid || undefined,
-                isRecurrent: transactionForm.isRecurrent || undefined,
+                date: transactionForm.date,
+                isPaid: transactionForm.isPaid,
+                isRecurrent: transactionForm.isRecurrent,
                 billingDay: transactionForm.billingDay ? Number(transactionForm.billingDay) : undefined,
             });
             patchUser({ balance });

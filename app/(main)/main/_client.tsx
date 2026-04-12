@@ -4,10 +4,13 @@ import { Box, Card, CircularProgress, Grid, IconButton, InputAdornment, List, Li
 import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { LazyPieChart as PieChart, LazyBarChart as BarChart, Pie, Tooltip, ResponsiveContainer, Legend, Bar, XAxis, YAxis } from "@/lib/components/LazyRecharts"
+import dynamic from 'next/dynamic'
+
+const DashboardPieChart = dynamic(() => import('@/app/components/charts/DashboardPieChart'), { ssr: false })
+const DashboardBarChart = dynamic(() => import('@/app/components/charts/DashboardBarChart'), { ssr: false })
 import TransactionCard from "@/app/components/TransactionCard"
 import TransactionCrudDialogs from "@/app/components/TransactionCrudDialogs"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { transactionsApi, usersApi } from "@/lib/api"
 import type { DashboardData } from "@/lib/api"
 import { useAuth } from "@/lib/contexts/AuthContext"
@@ -45,17 +48,17 @@ const Dashboard = () => {
         return () => window.removeEventListener('transaction-change', handler);
     }, [fetchDashboard]);
 
-    const upcomingExpenses = dashboardData?.upcomingExpenses ?? [];
-    const monthlyExpenseTotal = (dashboardData?.monthlyExpenses ?? 0) / 100;
-    const monthlyIncomeTotal = (dashboardData?.monthlyIncome ?? 0) / 100;
-    const monthlyBalance = monthlyIncomeTotal - monthlyExpenseTotal;
-    const expensesByCategory = (dashboardData?.expensesByCategory ?? [])
+    const upcomingExpenses = useMemo(() => dashboardData?.upcomingExpenses ?? [], [dashboardData]);
+    const monthlyExpenseTotal = useMemo(() => (dashboardData?.monthlyExpenses ?? 0) / 100, [dashboardData]);
+    const monthlyIncomeTotal = useMemo(() => (dashboardData?.monthlyIncome ?? 0) / 100, [dashboardData]);
+    const monthlyBalance = useMemo(() => monthlyIncomeTotal - monthlyExpenseTotal, [monthlyIncomeTotal, monthlyExpenseTotal]);
+    const expensesByCategory = useMemo(() => (dashboardData?.expensesByCategory ?? [])
         .map(c => ({
             ...c,
             value: c.value / 100,
             fill: c.color,
         }))
-        .sort((a, b) => b.value - a.value);
+        .sort((a, b) => b.value - a.value), [dashboardData]);
 
     const userBalance = (user?.balance ?? 0) / 100;
 
@@ -70,7 +73,7 @@ const Dashboard = () => {
     }, []);
 
     const handleSaveBalance = useCallback(async () => {
-        const parsed = parseFloat(balanceInput.replace(',', '.'));
+        const parsed = parseFloat(balanceInput.replace(/\./g, '').replace(',', '.'));
         if (isNaN(parsed)) return;
         setIsSavingBalance(true);
         try {
@@ -175,13 +178,7 @@ const Dashboard = () => {
                     </Card>
                     <Card variant="outlined" sx={{ padding: 2, m: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                         <Typography variant="h6" sx={{ textAlign: 'left', width: '100%' }}>Despesas por Categoria</Typography>
-                        <ResponsiveContainer width="100%" height={450}>
-                            <PieChart width={400} height={400}>
-                                <Pie data={expensesByCategory} dataKey="value" nameKey="name" />
-                                <Tooltip formatter={(value: number | undefined) => value?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? ''} />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <DashboardPieChart data={expensesByCategory} />
                     </Card>
                 </Grid>
                 <Grid size={4}>
@@ -191,14 +188,7 @@ const Dashboard = () => {
                     </Card>
                     <Card variant="outlined" sx={{ padding: 2, m: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                         <Typography variant="h6" sx={{ textAlign: 'left', width: '100%' }}>Despesas por Categoria</Typography>
-                        <ResponsiveContainer width="100%" height={450}>
-                            <BarChart width={400} height={400} data={expensesByCategory} layout="vertical">
-                                <XAxis type="number" />
-                                <YAxis type="category" dataKey="name" width={100} />
-                                <Bar dataKey="value" name="value" />
-                                <Tooltip />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <DashboardBarChart data={expensesByCategory} />
                     </Card>
                     <Card variant="outlined" sx={{ padding: 2, m: 2 }}>
                         <Typography variant="h5">Balanço do mês</Typography>
