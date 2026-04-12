@@ -1,9 +1,10 @@
-const Calendar = () => {
-    return (
-        <div>
-            <h1>Calendar</h1>
-        </div>
-    )
+import type { Metadata } from 'next'
+import Calendar from './_client'
+
+export const metadata: Metadata = {
+    title: 'Calendário',
 }
 
-export default Calendar
+export default function CalendarPage() {
+    return <Calendar />
+}

@@ -1,0 +1,468 @@
+'use client'
+
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import {
+    Box,
+    Card,
+    Checkbox,
+    CircularProgress,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Typography,
+} from '@mui/material'
+import { transactionsApi } from '@/lib/api'
+import type { Transaction, BulkUpdateData } from '@/lib/api'
+import { useAuth } from '@/lib/contexts/AuthContext'
+import { useCategories } from '@/lib/contexts/CategoriesContext'
+import TransactionCrudDialogs from '@/app/components/TransactionCrudDialogs'
+import { useTransactionCrud } from '@/lib/hooks/useTransactionCrud'
+import TransactionFilters from './TransactionFilters'
+import BulkActionDialogs from './BulkActionDialogs'
+import TablePagination from './TablePagination'
+import TableRowItem from './TableRowItem'
+import type { DisplayRow } from './TableRowItem'
+
+export interface ServerFilterValues {
+    type?: 'credito' | 'debito'
+    category?: string
+    isRecurrent?: boolean
+    isPaid?: boolean
+    startDate?: string
+    endDate?: string
+}
+
+interface ServerPaginationProps {
+    page: number
+    pages: number
+    total: number
+    rowsPerPage: number
+    onPageChange: (page: number) => void
+    onRowsPerPageChange: (rowsPerPage: number) => void
+}
+
+interface TransactionsTableProps {
+    transactions: Transaction[]
+    onTransactionChange?: () => void
+    serverPagination?: ServerPaginationProps
+    isLoading?: boolean
+    onFiltersChange?: (filters: ServerFilterValues) => void
+}
+
+const TransactionsTable = ({ transactions, onTransactionChange, serverPagination, isLoading, onFiltersChange }: TransactionsTableProps) => {
+    const { patchUser } = useAuth()
+    const { categories: allCategories } = useCategories()
+
+    const crud = useTransactionCrud({ onChanged: onTransactionChange })
+
+    // Pagination (used only in client-side mode)
+    const [localPage, setLocalPage] = useState(0)
+    const [localRowsPerPage, setLocalRowsPerPage] = useState(10)
+
+    const page = serverPagination ? serverPagination.page : localPage
+    const rowsPerPage = serverPagination ? serverPagination.rowsPerPage : localRowsPerPage
+    const setPage = serverPagination ? serverPagination.onPageChange : setLocalPage
+    const setRowsPerPage = serverPagination ? serverPagination.onRowsPerPageChange : setLocalRowsPerPage
+
+    // Filters
+    const [startDate, setStartDate] = useState('')
+    const [endDate, setEndDate] = useState('')
+    const [typeFilter, setTypeFilter] = useState<'' | 'Despesa' | 'Receita'>('')
+    const [categoryFilter, setCategoryFilter] = useState('')
+    const [recurrentOnly, setRecurrentOnly] = useState(false)
+    const [paidFilter, setPaidFilter] = useState<'' | 'true' | 'false'>('')
+
+    // Description expand state
+    const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set())
+
+    // Selection state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+    // Bulk actions menu
+    const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null)
+
+    // Bulk delete confirmation
+    const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+    // Bulk update modal
+    const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false)
+    const [bulkUpdateFields, setBulkUpdateFields] = useState<Record<string, boolean>>({})
+    const [bulkUpdateForm, setBulkUpdateForm] = useState({
+        description: '',
+        value: '',
+        type: '' as '' | 'credito' | 'debito',
+        category: '',
+        date: '',
+        isPaid: false,
+    })
+    const [isBulkUpdating, setIsBulkUpdating] = useState(false)
+    const [isBulkUpdateConfirmOpen, setIsBulkUpdateConfirmOpen] = useState(false)
+
+    const rows: DisplayRow[] = useMemo(() =>
+        transactions.map(tx => {
+            const date = tx.timestamp.split('T')[0]
+            return {
+                id: tx._id,
+                date,
+                formattedDate: new Date(date + 'T00:00:00').toLocaleDateString('pt-BR'),
+                description: tx.description,
+                amount: tx.value / 100,
+                type: (tx.type === 'debito' ? 'Despesa' : 'Receita') as 'Despesa' | 'Receita',
+                category: tx.category?.name || '—',
+                isRecurrent: tx.isRecurrent,
+                isPaid: tx.isPaid,
+            }
+        }),
+        [transactions]
+    )
+
+    const categories = useMemo(
+        () => allCategories
+            .map(c => ({ _id: c._id, name: c.name }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        [allCategories]
+    )
+
+    const filteredRows = useMemo(() => {
+        // When using server pagination, data is already filtered server-side
+        if (serverPagination) return rows
+
+        let result = rows
+
+        if (startDate) {
+            result = result.filter((r) => r.date >= startDate)
+        }
+        if (endDate) {
+            result = result.filter((r) => r.date <= endDate)
+        }
+        if (typeFilter) {
+            result = result.filter((r) => r.type === typeFilter)
+        }
+        if (categoryFilter) {
+            const catName = allCategories.find(c => c._id === categoryFilter)?.name
+            if (catName) result = result.filter((r) => r.category === catName)
+        }
+        if (recurrentOnly) {
+            result = result.filter((r) => r.isRecurrent)
+        }
+        if (paidFilter !== '') {
+            const isPaid = paidFilter === 'true'
+            result = result.filter((r) => r.isPaid === isPaid)
+        }
+
+        return result.sort((a, b) => b.date.localeCompare(a.date))
+    }, [rows, serverPagination, startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, allCategories])
+
+    const totalPages = serverPagination
+        ? serverPagination.pages
+        : Math.max(1, Math.ceil(filteredRows.length / rowsPerPage))
+    const paginatedRows = serverPagination
+        ? filteredRows
+        : filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
+    // Ref to hold current filter values for stable emitFilters callback
+    const filterValuesRef = useRef({ startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter })
+    filterValuesRef.current = { startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter }
+
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    }, [])
+
+    const emitFilters = useCallback((overrides: Partial<typeof filterValuesRef.current>) => {
+        if (!onFiltersChange) return
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+            const f = { ...filterValuesRef.current, ...overrides }
+            const filters: ServerFilterValues = {}
+            if (f.startDate) filters.startDate = f.startDate
+            if (f.endDate) filters.endDate = f.endDate
+            if (f.typeFilter === 'Despesa') filters.type = 'debito'
+            else if (f.typeFilter === 'Receita') filters.type = 'credito'
+            if (f.categoryFilter) filters.category = f.categoryFilter
+            if (f.recurrentOnly) filters.isRecurrent = true
+            if (f.paidFilter === 'true') filters.isPaid = true
+            else if (f.paidFilter === 'false') filters.isPaid = false
+            onFiltersChange(filters)
+        }, 400)
+    }, [onFiltersChange])
+
+    const handleFilterChange = useCallback(() => {
+        setPage(0)
+    }, [])
+
+    const notifyBulkChange = useCallback((balance: number) => {
+        patchUser({ balance })
+        window.dispatchEvent(new Event('transaction-change'))
+        onTransactionChange?.()
+    }, [patchUser, onTransactionChange])
+
+    // --- Edit / Delete / Payment handlers (delegated to shared hook) ---
+    const handleOpenEdit = useCallback((row: DisplayRow) => {
+        const tx = transactions.find(t => t._id === row.id)
+        if (tx) crud.edit.open(tx)
+    }, [transactions, crud.edit])
+
+    const handleOpenDelete = useCallback((row: DisplayRow) => {
+        const tx = transactions.find(t => t._id === row.id)
+        if (tx) crud.del.open(tx)
+    }, [transactions, crud.del])
+
+    const handleOpenPayment = useCallback((row: DisplayRow) => {
+        const tx = transactions.find(t => t._id === row.id)
+        if (tx) crud.payment.open(tx)
+    }, [transactions, crud.payment])
+
+    const handleToggleExpand = useCallback((id: string) => {
+        setExpandedDescs(prev => new Set(prev).add(id))
+    }, [])
+
+    const handleCollapseExpand = useCallback((id: string) => {
+        setExpandedDescs(prev => { const next = new Set(prev); next.delete(id); return next })
+    }, [])
+
+    // Bulk update category options (depends on selected type in bulk form)
+    const bulkUpdateCategories = useMemo(() => {
+        if (!bulkUpdateForm.type) return allCategories.map(c => ({ _id: c._id, name: c.name }))
+        return allCategories
+            .filter(c => c.type === bulkUpdateForm.type)
+            .map(c => ({ _id: c._id, name: c.name }))
+    }, [allCategories, bulkUpdateForm.type])
+
+    // --- Selection handlers ---
+    const toggleSelect = useCallback((id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }, [])
+
+    const toggleSelectAll = useCallback(() => {
+        const pageIds = paginatedRows.map(r => r.id)
+        setSelectedIds(prev => {
+            const allSelected = pageIds.every(id => prev.has(id))
+            const next = new Set(prev)
+            if (allSelected) {
+                pageIds.forEach(id => next.delete(id))
+            } else {
+                pageIds.forEach(id => next.add(id))
+            }
+            return next
+        })
+    }, [paginatedRows])
+
+    const hasSelection = selectedIds.size > 0
+    const allOnPageSelected = paginatedRows.length > 0 && paginatedRows.every(r => selectedIds.has(r.id))
+
+    // --- Bulk delete ---
+    const handleOpenBulkDelete = useCallback(() => {
+        setBulkMenuAnchor(null)
+        setIsBulkDeleteDialogOpen(true)
+    }, [])
+
+    const handleConfirmBulkDelete = useCallback(async () => {
+        setIsBulkDeleting(true)
+        try {
+            const { balance } = await transactionsApi.bulkDelete(Array.from(selectedIds))
+            setSelectedIds(new Set())
+            notifyBulkChange(balance)
+            setIsBulkDeleteDialogOpen(false)
+        } catch (error) {
+            console.error('Failed to bulk delete:', error)
+        } finally {
+            setIsBulkDeleting(false)
+        }
+    }, [selectedIds, notifyBulkChange])
+
+    // --- Bulk update ---
+    const handleOpenBulkUpdate = useCallback(() => {
+        setBulkMenuAnchor(null)
+        setBulkUpdateFields({})
+        setBulkUpdateForm({ description: '', value: '', type: '', category: '', date: '', isPaid: false })
+        setIsBulkUpdateModalOpen(true)
+    }, [])
+
+    const handleBulkUpdateProceed = useCallback(() => {
+        setIsBulkUpdateModalOpen(false)
+        setIsBulkUpdateConfirmOpen(true)
+    }, [])
+
+    const handleConfirmBulkUpdate = useCallback(async () => {
+        setIsBulkUpdating(true)
+        try {
+            const updates: BulkUpdateData = {}
+            if (bulkUpdateFields.description) updates.description = bulkUpdateForm.description
+            if (bulkUpdateFields.value) updates.value = parseFloat(bulkUpdateForm.value)
+            if (bulkUpdateFields.type) updates.type = bulkUpdateForm.type as 'credito' | 'debito'
+            if (bulkUpdateFields.category) updates.category = bulkUpdateForm.category
+            if (bulkUpdateFields.date) updates.date = bulkUpdateForm.date
+            if (bulkUpdateFields.isPaid) updates.isPaid = bulkUpdateForm.isPaid
+
+            const { balance } = await transactionsApi.bulkUpdate(Array.from(selectedIds), updates)
+            setSelectedIds(new Set())
+            notifyBulkChange(balance)
+            setIsBulkUpdateConfirmOpen(false)
+        } catch (error) {
+            console.error('Failed to bulk update:', error)
+        } finally {
+            setIsBulkUpdating(false)
+        }
+    }, [selectedIds, bulkUpdateFields, bulkUpdateForm, notifyBulkChange])
+
+    const handleCancelBulkUpdateConfirm = useCallback(() => {
+        setIsBulkUpdateConfirmOpen(false)
+        setIsBulkUpdateModalOpen(true)
+    }, [])
+
+    const hasEnabledBulkFields = Object.values(bulkUpdateFields).some(v => v)
+
+    const handleFilterStartDate = useCallback((v: string) => { setStartDate(v); handleFilterChange(); emitFilters({ startDate: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterEndDate = useCallback((v: string) => { setEndDate(v); handleFilterChange(); emitFilters({ endDate: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterType = useCallback((v: '' | 'Despesa' | 'Receita') => { setTypeFilter(v); handleFilterChange(); emitFilters({ typeFilter: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterCategory = useCallback((v: string) => { setCategoryFilter(v); handleFilterChange(); emitFilters({ categoryFilter: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterRecurrent = useCallback((v: boolean) => { setRecurrentOnly(v); handleFilterChange(); emitFilters({ recurrentOnly: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterPaid = useCallback((v: '' | 'true' | 'false') => { setPaidFilter(v); handleFilterChange(); emitFilters({ paidFilter: v }) }, [handleFilterChange, emitFilters])
+
+    const handleBulkUpdateFieldToggle = useCallback((field: string, checked: boolean) => {
+        setBulkUpdateFields(prev => ({ ...prev, [field]: checked }))
+    }, [])
+
+    const handleBulkUpdateFormChange = useCallback((field: string, value: string | boolean) => {
+        if (field === 'type') {
+            setBulkUpdateForm(prev => ({ ...prev, type: value as '' | 'credito' | 'debito', category: '' }))
+        } else {
+            setBulkUpdateForm(prev => ({ ...prev, [field]: value }))
+        }
+    }, [])
+
+    return (
+        <>
+        <Card sx={{ p: 2 }}>
+            {/* Filter bar */}
+            <TransactionFilters
+                startDate={startDate}
+                endDate={endDate}
+                typeFilter={typeFilter}
+                categoryFilter={categoryFilter}
+                recurrentOnly={recurrentOnly}
+                paidFilter={paidFilter}
+                categories={categories}
+                onStartDateChange={handleFilterStartDate}
+                onEndDateChange={handleFilterEndDate}
+                onTypeFilterChange={handleFilterType}
+                onCategoryFilterChange={handleFilterCategory}
+                onRecurrentOnlyChange={handleFilterRecurrent}
+                onPaidFilterChange={handleFilterPaid}
+                selectedCount={selectedIds.size}
+                bulkMenuAnchor={bulkMenuAnchor}
+                onBulkMenuOpen={(e) => setBulkMenuAnchor(e.currentTarget)}
+                onBulkMenuClose={() => setBulkMenuAnchor(null)}
+                onBulkDelete={handleOpenBulkDelete}
+                onBulkUpdate={handleOpenBulkUpdate}
+            />
+
+            {/* Table */}
+            <Box sx={{ position: 'relative' }}>
+            {isLoading && (
+                <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.7)', zIndex: 1 }}>
+                    <CircularProgress />
+                </Box>
+            )}
+            <TableContainer>
+                <Table stickyHeader>
+                    <TableHead sx={{ '& .MuiTableCell-head': { backgroundColor: 'primary.main', color: 'white' } }}>
+                        <TableRow>
+                            <TableCell padding="checkbox">
+                                <Checkbox
+                                    checked={allOnPageSelected}
+                                    indeterminate={hasSelection && !allOnPageSelected}
+                                    onChange={toggleSelectAll}
+                                    sx={{ color: 'white', '&.Mui-checked': { color: 'white' }, '&.MuiCheckbox-indeterminate': { color: 'white' } }}
+                                />
+                            </TableCell>
+                            <TableCell><Typography variant="subtitle2">Data</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Descrição</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Valor</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Tipo</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Categoria</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Recorrente</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Pago</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Ações</Typography></TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {paginatedRows.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={9} align="center">
+                                    <Typography variant="body2" sx={{ py: 4, color: 'text.secondary' }}>
+                                        Nenhuma transação encontrada
+                                    </Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            paginatedRows.map((row) => (
+                                <TableRowItem
+                                    key={row.id}
+                                    row={row}
+                                    isSelected={selectedIds.has(row.id)}
+                                    isExpanded={expandedDescs.has(row.id)}
+                                    onToggleSelect={toggleSelect}
+                                    onToggleExpand={handleToggleExpand}
+                                    onCollapseExpand={handleCollapseExpand}
+                                    onEdit={handleOpenEdit}
+                                    onDelete={handleOpenDelete}
+                                    onPayment={handleOpenPayment}
+                                />
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+            </Box>
+
+            {/* Pagination */}
+            <TablePagination
+                page={page}
+                totalPages={totalPages}
+                rowsPerPage={rowsPerPage}
+                onPageChange={setPage}
+                onRowsPerPageChange={setRowsPerPage}
+            />
+        </Card>
+
+        {/* Edit / Delete / Payment Dialogs (shared) */}
+        <TransactionCrudDialogs crud={crud} />
+
+        {/* Bulk Action Dialogs */}
+        <BulkActionDialogs
+            selectedCount={selectedIds.size}
+            isBulkDeleteDialogOpen={isBulkDeleteDialogOpen}
+            isBulkDeleting={isBulkDeleting}
+            onCloseBulkDelete={() => setIsBulkDeleteDialogOpen(false)}
+            onConfirmBulkDelete={handleConfirmBulkDelete}
+            isBulkUpdateModalOpen={isBulkUpdateModalOpen}
+            bulkUpdateFields={bulkUpdateFields}
+            bulkUpdateForm={bulkUpdateForm}
+            bulkUpdateCategories={bulkUpdateCategories}
+            hasEnabledBulkFields={hasEnabledBulkFields}
+            onCloseBulkUpdate={() => setIsBulkUpdateModalOpen(false)}
+            onBulkUpdateFieldToggle={handleBulkUpdateFieldToggle}
+            onBulkUpdateFormChange={handleBulkUpdateFormChange}
+            onBulkUpdateProceed={handleBulkUpdateProceed}
+            isBulkUpdateConfirmOpen={isBulkUpdateConfirmOpen}
+            isBulkUpdating={isBulkUpdating}
+            onCancelBulkUpdateConfirm={handleCancelBulkUpdateConfirm}
+            onConfirmBulkUpdate={handleConfirmBulkUpdate}
+        />
+        </>
+    )
+}
+
+export default TransactionsTable
