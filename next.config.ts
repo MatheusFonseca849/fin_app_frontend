@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === 'development';
 
+const apiOrigin = (() => {
+  try { return new URL(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').origin; }
+  catch { return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'; }
+})();
+
 const securityHeaders = [
   {
     key: 'X-Frame-Options',
@@ -31,7 +36,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://res.cloudinary.com",
       "font-src 'self' data:",
-      "connect-src 'self' " + (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'),
+      "connect-src 'self' " + apiOrigin,
       "frame-ancestors 'none'",
     ].join('; '),
   },
