@@ -69,7 +69,7 @@ export function useTransactionCrud({ onChanged }: UseTransactionCrudOptions = {}
                 category: editForm.category,
                 date: editForm.date || undefined,
                 isPaid: editForm.isPaid,
-                isRecurrent: editForm.isRecurrent || undefined,
+                isRecurrent: editForm.isRecurrent,
                 billingDay: editForm.billingDay ? Number(editForm.billingDay) : undefined,
             })
             notifyChange(balance)
@@ -137,7 +137,7 @@ export function useTransactionCrud({ onChanged }: UseTransactionCrudOptions = {}
         }
     }, [payingTransaction, notifyChange, closePayment])
 
-    return {
+    return useMemo(() => ({
         edit: {
             transaction: editingTransaction,
             form: editForm,
@@ -165,7 +165,11 @@ export function useTransactionCrud({ onChanged }: UseTransactionCrudOptions = {}
             close: closePayment,
             confirm: confirmPayment,
         },
-    }
+    }), [
+        editingTransaction, editForm, isEditModalOpen, isSavingEdit, openEdit, closeEdit, saveEdit, editCategories,
+        deletingTransaction, isDeleteDialogOpen, isDeleting, openDelete, closeDelete, confirmDelete,
+        payingTransaction, isPayDialogOpen, isPaying, openPayment, closePayment, confirmPayment,
+    ])
 }
 
 export type TransactionCrud = ReturnType<typeof useTransactionCrud>

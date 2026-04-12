@@ -10,6 +10,8 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { usersApi } from "@/lib/api"
 import { useEditablePage } from "@/lib/contexts/EditablePageContext"
+import { extractError } from '@/lib/utils/extractError'
+import { validatePassword } from '@/lib/utils/validatePassword'
 
 const validateName = (value: string): string | null => {
     const trimmed = value.trim()
@@ -131,8 +133,9 @@ const Profile = () => {
             setFeedback({ message: 'Informe sua senha atual.', severity: 'error' });
             return;
         }
-        if (newPassword.length < 6) {
-            setFeedback({ message: 'A nova senha deve ter no mínimo 6 caracteres.', severity: 'error' });
+        const passwordError = validatePassword(newPassword);
+        if (passwordError) {
+            setFeedback({ message: passwordError, severity: 'error' });
             return;
         }
         if (newPassword !== confirmPassword) {
@@ -175,20 +178,8 @@ const Profile = () => {
             await logout();
             router.replace('/login');
         } catch (err: unknown) {
-            if (
-                typeof err === 'object' &&
-                err !== null &&
-                'response' in err
-            ) {
-                const axiosErr = err as { response?: { status?: number; data?: { error?: { message?: string } } } };
-                if (axiosErr.response?.status === 401) {
-                    setDeleteError(axiosErr.response.data?.error?.message || 'Senha incorreta');
-                } else {
-                    setDeleteError(axiosErr.response?.data?.error?.message || 'Erro ao deletar conta.');
-                }
-            } else {
-                setDeleteError('Erro ao deletar conta.');
-            }
+            const { message, status } = extractError(err, 'Erro ao deletar conta.');
+            setDeleteError(status === 401 ? (message || 'Senha incorreta') : message);
             setIsDeleting(false);
         }
     }, [user, deletePassword, logout, router]);

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 
 interface Feedback {
   message: string;
@@ -50,14 +50,16 @@ export const EditablePageProvider = ({ children }: { children: React.ReactNode }
     }
   }, []);
 
+  const value = useMemo(() => ({
+    isDirty, setIsDirty,
+    isSaving, setIsSaving,
+    feedback, setFeedback,
+    registerSave, registerCancel,
+    triggerSave, triggerCancel,
+  }), [isDirty, isSaving, feedback, registerSave, registerCancel, triggerSave, triggerCancel]);
+
   return (
-    <EditablePageContext.Provider value={{
-      isDirty, setIsDirty,
-      isSaving, setIsSaving,
-      feedback, setFeedback,
-      registerSave, registerCancel,
-      triggerSave, triggerCancel,
-    }}>
+    <EditablePageContext.Provider value={value}>
       {children}
     </EditablePageContext.Provider>
   );

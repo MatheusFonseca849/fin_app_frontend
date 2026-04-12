@@ -8,7 +8,12 @@ export const setAccessToken = (token: string | null) => {
   accessToken = token;
 };
 
-export const getAccessToken = () => accessToken;
+let onAuthFailure: (() => void) | null = null;
+
+export const setOnAuthFailure = (cb: () => void) => {
+  onAuthFailure = cb;
+};
+
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -85,9 +90,7 @@ api.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
       setAccessToken(null);
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+      onAuthFailure?.();
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
