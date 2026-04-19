@@ -27,7 +27,7 @@ interface CategoryOption {
 interface BulkUpdateFormData {
     description: string
     value: string
-    type: '' | 'credito' | 'debito'
+    type: '' | 'income' | 'expense'
     category: string
     date: string
     isPaid: boolean
@@ -159,8 +159,8 @@ const BulkActionDialogs = ({
                                     label="Tipo"
                                     onChange={(e) => onBulkUpdateFormChange('type', e.target.value)}
                                 >
-                                    <MenuItem value="debito">Despesa</MenuItem>
-                                    <MenuItem value="credito">Receita</MenuItem>
+                                    <MenuItem value="expense">Despesa</MenuItem>
+                                    <MenuItem value="income">Receita</MenuItem>
                                 </Select>
                             </FormControl>
                         </Box>

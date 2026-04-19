@@ -180,8 +180,8 @@ export const monthlyBalance = Object.keys(MONTH_LABELS).map((monthKey) => {
 
     return {
         month: MONTH_LABELS[monthKey],
-        despesas: totalExpenses,
-        receitas: totalIncome,
-        saldo: totalIncome - totalExpenses,
+        expenses: totalExpenses,
+        income: totalIncome,
+        balance: totalIncome - totalExpenses,
     };
 });

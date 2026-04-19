@@ -4,7 +4,7 @@ export interface TransactionCategory {
   _id: string;
   name: string;
   color: string;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
 }
 
 export interface Transaction {
@@ -12,7 +12,7 @@ export interface Transaction {
   userId: string;
   description: string;
   value: number;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
   category: TransactionCategory;
   isRecurrent: boolean;
   billingDay?: number;
@@ -37,7 +37,7 @@ export interface TransactionsResponse {
 export interface TransactionFilters {
   page?: number;
   limit?: number;
-  type?: 'credito' | 'debito';
+  type?: 'income' | 'expense';
   category?: string;
   isRecurrent?: boolean;
   isPaid?: boolean;
@@ -48,15 +48,15 @@ export interface TransactionFilters {
 export interface MonthlySummaryItem {
   year: number;
   month: number;
-  despesas: number;
-  receitas: number;
-  saldo: number;
+  expenses: number;
+  income: number;
+  balance: number;
 }
 
 export interface CreateTransactionData {
   description: string;
   value: number;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
   category: string;
   date: string;
   isRecurrent?: boolean;
@@ -67,7 +67,7 @@ export interface CreateTransactionData {
 export interface UpdateTransactionData {
   description?: string;
   value?: number;
-  type?: 'credito' | 'debito';
+  type?: 'income' | 'expense';
   category?: string;
   date?: string;
   isRecurrent?: boolean;
@@ -95,7 +95,7 @@ export interface ImportPreviewRow {
   description: string;
   value: number;
   valueCents: number;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
   categoryId: string;
   categoryName: string;
   date: string;
@@ -112,7 +112,7 @@ export interface ImportPreviewResponse {
 export interface ImportConfirmTransaction {
   description: string;
   value: number;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
   categoryId: string;
   date: string;
   isPaid: boolean;
@@ -148,7 +148,7 @@ export interface BulkActionResult {
 export interface BulkUpdateData {
   description?: string;
   value?: number;
-  type?: 'credito' | 'debito';
+  type?: 'income' | 'expense';
   category?: string;
   date?: string;
   isPaid?: boolean;

@@ -3,14 +3,14 @@ import type { Category } from './auth';
 
 export interface CreateCategoryData {
   name: string;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
   color?: string;
   keywords?: string[];
 }
 
 export interface UpdateCategoryData {
   name?: string;
-  type?: 'credito' | 'debito';
+  type?: 'income' | 'expense';
   color?: string;
   keywords?: string[];
 }

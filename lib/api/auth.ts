@@ -35,7 +35,7 @@ export interface User {
 export interface Category {
   _id: string;
   name: string;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
   color: string;
   keywords: string[];
 }

@@ -27,7 +27,7 @@ import TableRowItem from './TableRowItem'
 import type { DisplayRow } from './TableRowItem'
 
 export interface ServerFilterValues {
-    type?: 'credito' | 'debito'
+    type?: 'income' | 'expense'
     category?: string
     isRecurrent?: boolean
     isPaid?: boolean
@@ -94,7 +94,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     const [bulkUpdateForm, setBulkUpdateForm] = useState({
         description: '',
         value: '',
-        type: '' as '' | 'credito' | 'debito',
+        type: '' as '' | 'income' | 'expense',
         category: '',
         date: '',
         isPaid: false,
@@ -111,7 +111,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                 formattedDate: new Date(date + 'T00:00:00').toLocaleDateString('pt-BR'),
                 description: tx.description,
                 amount: tx.value / 100,
-                type: (tx.type === 'debito' ? 'Despesa' : 'Receita') as 'Despesa' | 'Receita',
+                type: (tx.type === 'expense' ? 'Despesa' : 'Receita') as 'Despesa' | 'Receita',
                 category: tx.category?.name || '—',
                 isRecurrent: tx.isRecurrent,
                 isPaid: tx.isPaid,
@@ -182,8 +182,8 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
             const filters: ServerFilterValues = {}
             if (f.startDate) filters.startDate = f.startDate
             if (f.endDate) filters.endDate = f.endDate
-            if (f.typeFilter === 'Despesa') filters.type = 'debito'
-            else if (f.typeFilter === 'Receita') filters.type = 'credito'
+            if (f.typeFilter === 'Despesa') filters.type = 'expense'
+            else if (f.typeFilter === 'Receita') filters.type = 'income'
             if (f.categoryFilter) filters.category = f.categoryFilter
             if (f.recurrentOnly) filters.isRecurrent = true
             if (f.paidFilter === 'true') filters.isPaid = true
@@ -300,7 +300,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
             const updates: BulkUpdateData = {}
             if (bulkUpdateFields.description) updates.description = bulkUpdateForm.description
             if (bulkUpdateFields.value) updates.value = parseFloat(bulkUpdateForm.value)
-            if (bulkUpdateFields.type) updates.type = bulkUpdateForm.type as 'credito' | 'debito'
+            if (bulkUpdateFields.type) updates.type = bulkUpdateForm.type as 'income' | 'expense'
             if (bulkUpdateFields.category) updates.category = bulkUpdateForm.category
             if (bulkUpdateFields.date) updates.date = bulkUpdateForm.date
             if (bulkUpdateFields.isPaid) updates.isPaid = bulkUpdateForm.isPaid
@@ -336,7 +336,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
 
     const handleBulkUpdateFormChange = useCallback((field: string, value: string | boolean) => {
         if (field === 'type') {
-            setBulkUpdateForm(prev => ({ ...prev, type: value as '' | 'credito' | 'debito', category: '' }))
+            setBulkUpdateForm(prev => ({ ...prev, type: value as '' | 'income' | 'expense', category: '' }))
         } else {
             setBulkUpdateForm(prev => ({ ...prev, [field]: value }))
         }
