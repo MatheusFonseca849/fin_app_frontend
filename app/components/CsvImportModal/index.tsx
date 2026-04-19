@@ -119,8 +119,8 @@ const PreviewRowRenderer = ({ index, style, rows, updateRow, updateRowCategory, 
           onChange={(e) => updateRow(index, 'type', e.target.value)}
           fullWidth
         >
-          <MenuItem value="debito">Despesa</MenuItem>
-          <MenuItem value="credito">Receita</MenuItem>
+          <MenuItem value="expense">Despesa</MenuItem>
+          <MenuItem value="income">Receita</MenuItem>
         </Select>
       </Box>
       <Box sx={{ width: 170, flexShrink: 0 }}>

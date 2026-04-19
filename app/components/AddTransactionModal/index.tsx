@@ -5,7 +5,7 @@ import { Checkbox, Collapse, FormControl, FormControlLabel, InputAdornment, Inpu
 export interface TransactionFormData {
     description: string
     value: string
-    type: 'credito' | 'debito'
+    type: 'income' | 'expense'
     category: string
     date: string
     isPaid: boolean
@@ -16,7 +16,7 @@ export interface TransactionFormData {
 export const initialTransactionFormData: TransactionFormData = {
     description: '',
     value: '',
-    type: 'debito',
+    type: 'expense',
     category: '',
     date: new Date().toISOString().split('T')[0],
     isPaid: false,
@@ -48,10 +48,10 @@ const AddTransaction = ({ formData, setFormData, categories }: AddTransactionPro
                 exclusive
                 onChange={(_, value) => value && handleChange('type', value)}
                 fullWidth
-                color={formData.type === 'credito' ? 'success' : 'error'}
+                color={formData.type === 'income' ? 'success' : 'error'}
             >
-                <ToggleButton value="debito">Despesa</ToggleButton>
-                <ToggleButton value="credito">Receita</ToggleButton>
+                <ToggleButton value="expense">Despesa</ToggleButton>
+                <ToggleButton value="income">Receita</ToggleButton>
             </ToggleButtonGroup>
 
             <TextField
@@ -106,7 +106,7 @@ const AddTransaction = ({ formData, setFormData, categories }: AddTransactionPro
                 </Select>
             </FormControl>
 
-            {formData.type === 'debito' && (
+            {formData.type === 'expense' && (
                 <FormControlLabel
                     control={
                         <Checkbox

@@ -6,14 +6,14 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 
 export interface CategoryFormData {
     name: string
-    type: 'credito' | 'debito'
+    type: 'income' | 'expense'
     color: string
     keywords: string[]
 }
 
 export const initialCategoryFormData: CategoryFormData = {
     name: '',
-    type: 'debito',
+    type: 'expense',
     color: '#1976d2',
     keywords: [],
 }
@@ -60,10 +60,10 @@ const AddCategory = ({ formData, setFormData }: AddCategoryProps) => {
                 exclusive
                 onChange={(_, value) => value && handleChange('type', value)}
                 fullWidth
-                color={formData.type === 'credito' ? 'success' : 'error'}
+                color={formData.type === 'income' ? 'success' : 'error'}
             >
-                <ToggleButton value="debito">Despesa</ToggleButton>
-                <ToggleButton value="credito">Receita</ToggleButton>
+                <ToggleButton value="expense">Despesa</ToggleButton>
+                <ToggleButton value="income">Receita</ToggleButton>
             </ToggleButtonGroup>
 
             <TextField

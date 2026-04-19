@@ -92,9 +92,9 @@ const HistoryPage = () => {
                 .toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
             return {
                 month: label,
-                despesas: Number((item.despesas / 100).toFixed(2)),
-                receitas: Number((item.receitas / 100).toFixed(2)),
-                saldo: Number((item.saldo / 100).toFixed(2)),
+                expenses: Number((item.expenses / 100).toFixed(2)),
+                income: Number((item.income / 100).toFixed(2)),
+                balance: Number((item.balance / 100).toFixed(2)),
             };
         }),
         [chartData]

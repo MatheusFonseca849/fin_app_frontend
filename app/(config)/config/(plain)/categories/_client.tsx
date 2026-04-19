@@ -24,12 +24,12 @@ const CategoriesPage = () => {
     const [isDeleting, setIsDeleting] = useState(false)
 
     const incomeCategories = useMemo(() =>
-        categories.filter(c => c.type === 'credito'),
+        categories.filter(c => c.type === 'income'),
         [categories]
     )
 
     const expenseCategories = useMemo(() =>
-        categories.filter(c => c.type === 'debito'),
+        categories.filter(c => c.type === 'expense'),
         [categories]
     )
 

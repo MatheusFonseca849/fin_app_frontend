@@ -26,7 +26,7 @@ interface CalendarTransaction {
     amount: number;
     category: string;
     date: string;
-    type: 'credito' | 'debito';
+    type: 'income' | 'expense';
 }
 
 const Calendar = () => {
@@ -74,9 +74,9 @@ const Calendar = () => {
 
     const events = useMemo(() =>
         transactions.map(tx => ({
-            title: `${tx.type === 'debito' ? '-' : '+'} R$ ${(tx.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} — ${tx.description}`,
+            title: `${tx.type === 'expense' ? '-' : '+'} R$ ${(tx.value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} — ${tx.description}`,
             start: tx.timestamp.split('T')[0],
-            color: tx.type === 'debito' ? '#d32f2f' : '#388e3c',
+            color: tx.type === 'expense' ? '#d32f2f' : '#388e3c',
             extendedProps: {
                 id: tx._id,
                 description: tx.description,
