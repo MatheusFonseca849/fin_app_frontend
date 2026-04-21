@@ -31,6 +31,7 @@ export interface ServerFilterValues {
     category?: string
     isRecurrent?: boolean
     isPaid?: boolean
+    paymentMode?: 'debit' | 'credit'
     startDate?: string
     endDate?: string
 }
@@ -74,6 +75,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     const [categoryFilter, setCategoryFilter] = useState('')
     const [recurrentOnly, setRecurrentOnly] = useState(false)
     const [paidFilter, setPaidFilter] = useState<'' | 'true' | 'false'>('')
+    const [paymentModeFilter, setPaymentModeFilter] = useState<'' | 'debit' | 'credit'>('')
 
     // Description expand state
     const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set())
@@ -113,6 +115,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                 amount: tx.value / 100,
                 type: (tx.type === 'expense' ? 'Despesa' : 'Receita') as 'Despesa' | 'Receita',
                 category: tx.category?.name || '—',
+                paymentMode: tx.type === 'income' ? '' : (tx.paymentMode === 'credit' ? 'Crédito' : 'Débito/Pix'),
                 isRecurrent: tx.isRecurrent,
                 isPaid: tx.isPaid,
             }
@@ -153,9 +156,13 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
             const isPaid = paidFilter === 'true'
             result = result.filter((r) => r.isPaid === isPaid)
         }
+        if (paymentModeFilter) {
+            const label = paymentModeFilter === 'credit' ? 'Crédito' : 'Débito/Pix'
+            result = result.filter((r) => r.paymentMode === label)
+        }
 
         return result.sort((a, b) => b.date.localeCompare(a.date))
-    }, [rows, serverPagination, startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, allCategories])
+    }, [rows, serverPagination, startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, paymentModeFilter, allCategories])
 
     const totalPages = serverPagination
         ? serverPagination.pages
@@ -165,8 +172,8 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
         : filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
 
     // Ref to hold current filter values for stable emitFilters callback
-    const filterValuesRef = useRef({ startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter })
-    filterValuesRef.current = { startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter }
+    const filterValuesRef = useRef({ startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, paymentModeFilter })
+    filterValuesRef.current = { startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, paymentModeFilter }
 
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -188,6 +195,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
             if (f.recurrentOnly) filters.isRecurrent = true
             if (f.paidFilter === 'true') filters.isPaid = true
             else if (f.paidFilter === 'false') filters.isPaid = false
+            if (f.paymentModeFilter) filters.paymentMode = f.paymentModeFilter as 'debit' | 'credit'
             onFiltersChange(filters)
         }, 400)
     }, [onFiltersChange])
@@ -329,6 +337,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     const handleFilterCategory = useCallback((v: string) => { setCategoryFilter(v); handleFilterChange(); emitFilters({ categoryFilter: v }) }, [handleFilterChange, emitFilters])
     const handleFilterRecurrent = useCallback((v: boolean) => { setRecurrentOnly(v); handleFilterChange(); emitFilters({ recurrentOnly: v }) }, [handleFilterChange, emitFilters])
     const handleFilterPaid = useCallback((v: '' | 'true' | 'false') => { setPaidFilter(v); handleFilterChange(); emitFilters({ paidFilter: v }) }, [handleFilterChange, emitFilters])
+    const handleFilterPaymentMode = useCallback((v: '' | 'debit' | 'credit') => { setPaymentModeFilter(v); handleFilterChange(); emitFilters({ paymentModeFilter: v }) }, [handleFilterChange, emitFilters])
 
     const handleBulkUpdateFieldToggle = useCallback((field: string, checked: boolean) => {
         setBulkUpdateFields(prev => ({ ...prev, [field]: checked }))
@@ -353,6 +362,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                 categoryFilter={categoryFilter}
                 recurrentOnly={recurrentOnly}
                 paidFilter={paidFilter}
+                paymentModeFilter={paymentModeFilter}
                 categories={categories}
                 onStartDateChange={handleFilterStartDate}
                 onEndDateChange={handleFilterEndDate}
@@ -360,6 +370,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                 onCategoryFilterChange={handleFilterCategory}
                 onRecurrentOnlyChange={handleFilterRecurrent}
                 onPaidFilterChange={handleFilterPaid}
+                onPaymentModeFilterChange={handleFilterPaymentMode}
                 selectedCount={selectedIds.size}
                 bulkMenuAnchor={bulkMenuAnchor}
                 onBulkMenuOpen={(e) => setBulkMenuAnchor(e.currentTarget)}
@@ -391,6 +402,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                             <TableCell><Typography variant="subtitle2">Descrição</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Valor</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Tipo</Typography></TableCell>
+                            <TableCell><Typography variant="subtitle2">Método Pagamento</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Categoria</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Recorrente</Typography></TableCell>
                             <TableCell><Typography variant="subtitle2">Pago</Typography></TableCell>
@@ -400,7 +412,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
                     <TableBody>
                         {paginatedRows.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} align="center">
+                                <TableCell colSpan={10} align="center">
                                     <Typography variant="body2" sx={{ py: 4, color: 'text.secondary' }}>
                                         Nenhuma transação encontrada
                                     </Typography>

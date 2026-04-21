@@ -21,6 +21,7 @@ interface DisplayRow {
     amount: number
     type: 'Despesa' | 'Receita'
     category: string
+    paymentMode: string
     isRecurrent: boolean
     isPaid: boolean
 }
@@ -99,6 +100,7 @@ const TableRowItem = memo(({
                 R$ {row.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </TableCell>
             <TableCell>{row.type}</TableCell>
+            <TableCell>{row.paymentMode}</TableCell>
             <TableCell>{row.category || '—'}</TableCell>
             <TableCell>{row.isRecurrent ? 'Sim' : 'Não'}</TableCell>
             <TableCell>{row.type === 'Receita' ? '' : row.isPaid ? 'Sim' : 'Não'}</TableCell>

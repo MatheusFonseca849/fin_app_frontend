@@ -45,6 +45,8 @@ export interface UserPreferences {
   language: 'pt-BR' | 'en-US' | 'es-MX';
   currency: 'BRL' | 'USD' | 'MXN';
   allowForeignCurrency: boolean;
+  creditCardClosingDay: number;
+  creditCardDueDay: number;
 }
 
 export interface ResetPasswordData {

@@ -33,6 +33,7 @@ const FabMenu = () => {
     const [categoryFeedback, setCategoryFeedback] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
     const [importModalOpen, setImportModalOpen] = useState(false);
+    const [ccImportModalOpen, setCcImportModalOpen] = useState(false);
 
     const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -63,9 +64,10 @@ const FabMenu = () => {
                 description: transactionForm.description,
                 value: valueInReais,
                 type: transactionForm.type,
+                paymentMode: transactionForm.type === 'expense' ? transactionForm.paymentMode : undefined,
                 category: transactionForm.category,
                 date: transactionForm.date,
-                isPaid: transactionForm.isPaid,
+                isPaid: transactionForm.type === 'expense' && transactionForm.paymentMode === 'credit' ? false : transactionForm.isPaid,
                 isRecurrent: transactionForm.isRecurrent,
                 billingDay: transactionForm.billingDay ? Number(transactionForm.billingDay) : undefined,
             });
@@ -118,6 +120,11 @@ const FabMenu = () => {
         setImportModalOpen(true);
     };
 
+    const handleOpenCcImportModal = () => {
+        handleClose();
+        setCcImportModalOpen(true);
+    };
+
     return (
         <>
             <Fab color="primary" aria-label="add" onClick={handleOpen} sx={{ position: 'fixed', bottom: 16, right: 16, width: 80, height: 80, backgroundColor: '#63885a', '&:hover': { backgroundColor: '#1fcf25' } }} >
@@ -131,6 +138,7 @@ const FabMenu = () => {
                 transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             >
                 <MenuItem onClick={handleOpenImportModal}>Importar Extrato</MenuItem>
+                <MenuItem onClick={handleOpenCcImportModal}>Importar Fatura</MenuItem>
                 <MenuItem onClick={handleOpenTransactionModal}>Adicionar Transação</MenuItem>
                 <MenuItem onClick={handleOpenCategoryModal}>Adicionar Categoria</MenuItem>
             </Menu>
@@ -181,6 +189,12 @@ const FabMenu = () => {
             <CsvImportModal
                 open={importModalOpen}
                 onClose={() => setImportModalOpen(false)}
+            />
+
+            <CsvImportModal
+                open={ccImportModalOpen}
+                onClose={() => setCcImportModalOpen(false)}
+                creditCardOnly
             />
         </>
     )
