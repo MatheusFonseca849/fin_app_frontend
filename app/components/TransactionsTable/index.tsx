@@ -69,13 +69,16 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
     const setRowsPerPage = serverPagination ? serverPagination.onRowsPerPageChange : setLocalRowsPerPage
 
     // Filters
-    const [startDate, setStartDate] = useState('')
-    const [endDate, setEndDate] = useState('')
-    const [typeFilter, setTypeFilter] = useState<'' | 'Despesa' | 'Receita'>('')
-    const [categoryFilter, setCategoryFilter] = useState('')
-    const [recurrentOnly, setRecurrentOnly] = useState(false)
-    const [paidFilter, setPaidFilter] = useState<'' | 'true' | 'false'>('')
-    const [paymentModeFilter, setPaymentModeFilter] = useState<'' | 'debit' | 'credit'>('')
+    const defaultFilters = {
+        startDate: '',
+        endDate: '',
+        typeFilter: '' as '' | 'Despesa' | 'Receita',
+        categoryFilter: '',
+        recurrentOnly: false,
+        paidFilter: '' as '' | 'true' | 'false',
+        paymentModeFilter: '' as '' | 'debit' | 'credit',
+    }
+    const [filters, setFilters] = useState(defaultFilters)
 
     // Description expand state
     const [expandedDescs, setExpandedDescs] = useState<Set<string>>(new Set())
@@ -135,6 +138,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
         if (serverPagination) return rows
 
         let result = rows
+        const { startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, paymentModeFilter } = filters
 
         if (startDate) {
             result = result.filter((r) => r.date >= startDate)
@@ -162,7 +166,7 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
         }
 
         return result.sort((a, b) => b.date.localeCompare(a.date))
-    }, [rows, serverPagination, startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, paymentModeFilter, allCategories])
+    }, [rows, serverPagination, filters, allCategories])
 
     const totalPages = serverPagination
         ? serverPagination.pages
@@ -172,8 +176,8 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
         : filteredRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
 
     // Ref to hold current filter values for stable emitFilters callback
-    const filterValuesRef = useRef({ startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, paymentModeFilter })
-    filterValuesRef.current = { startDate, endDate, typeFilter, categoryFilter, recurrentOnly, paidFilter, paymentModeFilter }
+    const filterValuesRef = useRef(filters)
+    filterValuesRef.current = filters
 
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -200,9 +204,11 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
         }, 400)
     }, [onFiltersChange])
 
-    const handleFilterChange = useCallback(() => {
+    const updateFilter = useCallback(<K extends keyof typeof defaultFilters>(key: K, value: typeof defaultFilters[K]) => {
+        setFilters(prev => ({ ...prev, [key]: value }))
         setPage(0)
-    }, [])
+        emitFilters({ [key]: value })
+    }, [setPage, emitFilters])
 
     const notifyBulkChange = useCallback((balance: number) => {
         patchUser({ balance })
@@ -331,14 +337,6 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
 
     const hasEnabledBulkFields = Object.values(bulkUpdateFields).some(v => v)
 
-    const handleFilterStartDate = useCallback((v: string) => { setStartDate(v); handleFilterChange(); emitFilters({ startDate: v }) }, [handleFilterChange, emitFilters])
-    const handleFilterEndDate = useCallback((v: string) => { setEndDate(v); handleFilterChange(); emitFilters({ endDate: v }) }, [handleFilterChange, emitFilters])
-    const handleFilterType = useCallback((v: '' | 'Despesa' | 'Receita') => { setTypeFilter(v); handleFilterChange(); emitFilters({ typeFilter: v }) }, [handleFilterChange, emitFilters])
-    const handleFilterCategory = useCallback((v: string) => { setCategoryFilter(v); handleFilterChange(); emitFilters({ categoryFilter: v }) }, [handleFilterChange, emitFilters])
-    const handleFilterRecurrent = useCallback((v: boolean) => { setRecurrentOnly(v); handleFilterChange(); emitFilters({ recurrentOnly: v }) }, [handleFilterChange, emitFilters])
-    const handleFilterPaid = useCallback((v: '' | 'true' | 'false') => { setPaidFilter(v); handleFilterChange(); emitFilters({ paidFilter: v }) }, [handleFilterChange, emitFilters])
-    const handleFilterPaymentMode = useCallback((v: '' | 'debit' | 'credit') => { setPaymentModeFilter(v); handleFilterChange(); emitFilters({ paymentModeFilter: v }) }, [handleFilterChange, emitFilters])
-
     const handleBulkUpdateFieldToggle = useCallback((field: string, checked: boolean) => {
         setBulkUpdateFields(prev => ({ ...prev, [field]: checked }))
     }, [])
@@ -356,21 +354,21 @@ const TransactionsTable = ({ transactions, onTransactionChange, serverPagination
         <Card sx={{ p: 2 }}>
             {/* Filter bar */}
             <TransactionFilters
-                startDate={startDate}
-                endDate={endDate}
-                typeFilter={typeFilter}
-                categoryFilter={categoryFilter}
-                recurrentOnly={recurrentOnly}
-                paidFilter={paidFilter}
-                paymentModeFilter={paymentModeFilter}
+                startDate={filters.startDate}
+                endDate={filters.endDate}
+                typeFilter={filters.typeFilter}
+                categoryFilter={filters.categoryFilter}
+                recurrentOnly={filters.recurrentOnly}
+                paidFilter={filters.paidFilter}
+                paymentModeFilter={filters.paymentModeFilter}
                 categories={categories}
-                onStartDateChange={handleFilterStartDate}
-                onEndDateChange={handleFilterEndDate}
-                onTypeFilterChange={handleFilterType}
-                onCategoryFilterChange={handleFilterCategory}
-                onRecurrentOnlyChange={handleFilterRecurrent}
-                onPaidFilterChange={handleFilterPaid}
-                onPaymentModeFilterChange={handleFilterPaymentMode}
+                onStartDateChange={(v) => updateFilter('startDate', v)}
+                onEndDateChange={(v) => updateFilter('endDate', v)}
+                onTypeFilterChange={(v) => updateFilter('typeFilter', v)}
+                onCategoryFilterChange={(v) => updateFilter('categoryFilter', v)}
+                onRecurrentOnlyChange={(v) => updateFilter('recurrentOnly', v)}
+                onPaidFilterChange={(v) => updateFilter('paidFilter', v)}
+                onPaymentModeFilterChange={(v) => updateFilter('paymentModeFilter', v)}
                 selectedCount={selectedIds.size}
                 bulkMenuAnchor={bulkMenuAnchor}
                 onBulkMenuOpen={(e) => setBulkMenuAnchor(e.currentTarget)}
