@@ -6,6 +6,7 @@ export interface TransactionFormData {
     description: string
     value: string
     type: 'income' | 'expense'
+    paymentMode: 'debit' | 'credit'
     category: string
     date: string
     isPaid: boolean
@@ -17,6 +18,7 @@ export const initialTransactionFormData: TransactionFormData = {
     description: '',
     value: '',
     type: 'expense',
+    paymentMode: 'debit',
     category: '',
     date: new Date().toISOString().split('T')[0],
     isPaid: false,
@@ -107,15 +109,31 @@ const AddTransaction = ({ formData, setFormData, categories }: AddTransactionPro
             </FormControl>
 
             {formData.type === 'expense' && (
-                <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={formData.isPaid}
-                            onChange={(e) => handleChange('isPaid', e.target.checked)}
+                <>
+                    <ToggleButtonGroup
+                        value={formData.paymentMode}
+                        exclusive
+                        onChange={(_, value) => value && handleChange('paymentMode', value)}
+                        fullWidth
+                        size="small"
+                        color={formData.paymentMode === 'debit' ? 'primary' : 'secondary'}
+                    >
+                        <ToggleButton value="debit">Débito / Pix</ToggleButton>
+                        <ToggleButton value="credit">Cartão de Crédito</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    {formData.paymentMode === 'debit' && (
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={formData.isPaid}
+                                    onChange={(e) => handleChange('isPaid', e.target.checked)}
+                                />
+                            }
+                            label="Pago"
                         />
-                    }
-                    label="Pago"
-                />
+                    )}
+                </>
             )}
 
             <FormControlLabel
