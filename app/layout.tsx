@@ -5,6 +5,7 @@ import ThemeRegistry from './ThemeRegistry';
 import { AuthProvider } from '@/lib/contexts/AuthContext';
 import { CategoriesProvider } from '@/lib/contexts/CategoriesContext';
 import { PreferencesProvider } from '@/lib/contexts/PreferencesContext';
+import { DashboardProvider } from '@/lib/contexts/DashboardContext';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -38,11 +39,13 @@ export default function RootLayout({
         <AppRouterCacheProvider options={{ key: 'css' }}>
           <AuthProvider>
             <CategoriesProvider>
-              <PreferencesProvider>
-                <ThemeRegistry>
-                  {children}
-                </ThemeRegistry>
-              </PreferencesProvider>
+              <DashboardProvider>
+                <PreferencesProvider>
+                  <ThemeRegistry>
+                    {children}
+                  </ThemeRegistry>
+                </PreferencesProvider>
+              </DashboardProvider>
             </CategoriesProvider>
           </AuthProvider>
         </AppRouterCacheProvider>
