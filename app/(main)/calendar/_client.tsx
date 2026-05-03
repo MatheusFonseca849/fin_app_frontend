@@ -12,40 +12,17 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/pt-br';
-import ModalComponent from '@/app/components/ModalComponent';
-import AddTransaction, { initialTransactionFormData, TransactionFormData } from '@/app/components/AddTransactionModal';
+import TransactionCrudDialogs from '@/app/components/TransactionCrudDialogs';
 import type { EventContentArg } from '@fullcalendar/core';
 import { transactionsApi } from "@/lib/api"
 import type { Transaction } from "@/lib/api"
-import { useAuth } from "@/lib/contexts/AuthContext"
-import { useCategories } from "@/lib/contexts/CategoriesContext"
-
-interface CalendarTransaction {
-    id: string;
-    description: string;
-    amount: number;
-    category: string;
-    date: string;
-    type: 'income' | 'expense';
-}
+import { useTransactionCrud } from '@/lib/hooks/useTransactionCrud'
 
 const Calendar = () => {
     const calendarRef = useRef<FullCalendar>(null);
-    const { user, patchUser } = useAuth();
-    const { categories: allCategories } = useCategories();
 
     // Transaction data
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-
-    // Edit modal state
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editingTransaction, setEditingTransaction] = useState<CalendarTransaction | null>(null);
-    const [editForm, setEditForm] = useState<TransactionFormData>(initialTransactionFormData);
-    const [isSavingEdit, setIsSavingEdit] = useState(false);
-
-    // Delete modal state
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [deletingTransaction, setDeletingTransaction] = useState<CalendarTransaction | null>(null);
 
     // Track visible date range for date-scoped fetching
     const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
@@ -59,6 +36,8 @@ const Calendar = () => {
             console.error('Failed to fetch transactions:', error);
         }
     }, [dateRange]);
+
+    const crud = useTransactionCrud({ onChanged: fetchTransactions });
 
     useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
@@ -79,11 +58,6 @@ const Calendar = () => {
             color: tx.type === 'expense' ? '#d32f2f' : '#388e3c',
             extendedProps: {
                 id: tx._id,
-                description: tx.description,
-                amount: tx.value / 100,
-                category: tx.category?.name || '',
-                date: tx.timestamp.split('T')[0],
-                type: tx.type,
             },
         })),
         [transactions]
@@ -95,80 +69,18 @@ const Calendar = () => {
         }
     };
 
-    const handleEdit = useCallback((tx: CalendarTransaction) => {
-        const fullTx = transactions.find(t => t._id === tx.id);
-        if (!fullTx) return;
-        setEditingTransaction(tx);
-        setEditForm({
-            description: fullTx.description,
-            value: (fullTx.value / 100).toFixed(2),
-            type: fullTx.type,
-            category: fullTx.category?._id || '',
-            date: fullTx.timestamp.split('T')[0],
-            isPaid: fullTx.isPaid,
-            isRecurrent: fullTx.isRecurrent,
-            billingDay: fullTx.billingDay ? String(fullTx.billingDay) : '',
-        });
-        setEditModalOpen(true);
-    }, [transactions]);
+    const handleEdit = useCallback((txId: string) => {
+        const tx = transactions.find(t => t._id === txId);
+        if (tx) crud.edit.open(tx);
+    }, [transactions, crud.edit]);
 
-    const handleCloseEdit = useCallback(() => {
-        setEditModalOpen(false);
-        setEditingTransaction(null);
-    }, []);
-
-    const handleEditSubmit = useCallback(async () => {
-        if (!editingTransaction) return;
-        setIsSavingEdit(true);
-        try {
-            const { balance } = await transactionsApi.update(editingTransaction.id, {
-                description: editForm.description,
-                value: parseFloat(editForm.value),
-                type: editForm.type,
-                category: editForm.category,
-                date: editForm.date || undefined,
-                isPaid: editForm.isPaid,
-                isRecurrent: editForm.isRecurrent,
-                billingDay: editForm.billingDay ? Number(editForm.billingDay) : undefined,
-            });
-            patchUser({ balance });
-            window.dispatchEvent(new Event('transaction-change'));
-            handleCloseEdit();
-            await fetchTransactions();
-        } catch (error) {
-            console.error('Failed to update transaction:', error);
-        } finally {
-            setIsSavingEdit(false);
-        }
-    }, [editingTransaction, editForm, patchUser, fetchTransactions, handleCloseEdit]);
-
-    const editCategories = useMemo(() => {
-        return allCategories
-            .filter(c => c.type === editForm.type)
-            .map(c => ({ _id: c._id, name: c.name }));
-    }, [allCategories, editForm.type]);
-
-    const handleDelete = useCallback((tx: CalendarTransaction) => {
-        setDeletingTransaction(tx);
-        setDeleteModalOpen(true);
-    }, []);
-
-    const handleDeleteConfirm = useCallback(async () => {
-        if (!deletingTransaction) return;
-        try {
-            const { balance } = await transactionsApi.delete(deletingTransaction.id);
-            patchUser({ balance });
-            window.dispatchEvent(new Event('transaction-change'));
-            setDeleteModalOpen(false);
-            setDeletingTransaction(null);
-            await fetchTransactions();
-        } catch (error) {
-            console.error('Failed to delete transaction:', error);
-        }
-    }, [deletingTransaction, patchUser, fetchTransactions]);
+    const handleDelete = useCallback((txId: string) => {
+        const tx = transactions.find(t => t._id === txId);
+        if (tx) crud.del.open(tx);
+    }, [transactions, crud.del]);
 
     const renderEventContent = useCallback((eventInfo: EventContentArg) => {
-        const tx = eventInfo.event.extendedProps as CalendarTransaction;
+        const txId = eventInfo.event.extendedProps.id as string;
         return (
             <Box
                 sx={{
@@ -198,7 +110,7 @@ const Calendar = () => {
                     <Tooltip title="Editar">
                         <IconButton
                             size="small"
-                            onClick={(e) => { e.stopPropagation(); handleEdit(tx); }}
+                            onClick={(e) => { e.stopPropagation(); handleEdit(txId); }}
                             sx={{ p: 0.25, color: 'white' }}
                         >
                             <EditIcon sx={{ fontSize: 14 }} />
@@ -207,7 +119,7 @@ const Calendar = () => {
                     <Tooltip title="Excluir">
                         <IconButton
                             size="small"
-                            onClick={(e) => { e.stopPropagation(); handleDelete(tx); }}
+                            onClick={(e) => { e.stopPropagation(); handleDelete(txId); }}
                             sx={{ p: 0.25, color: 'white' }}
                         >
                             <DeleteIcon sx={{ fontSize: 14 }} />
@@ -254,36 +166,7 @@ const Calendar = () => {
                 />
             </Box>
 
-            {/* Edit Modal */}
-            <ModalComponent
-                open={editModalOpen}
-                handleClose={handleCloseEdit}
-                title="Editar Transação"
-                layout={
-                    <AddTransaction
-                        formData={editForm}
-                        setFormData={setEditForm}
-                        categories={editCategories}
-                    />
-                }
-                action={handleEditSubmit}
-                confirmLabel={isSavingEdit ? 'Salvando...' : 'Salvar'}
-            />
-
-            {/* Delete Confirmation Modal */}
-            <ModalComponent
-                open={deleteModalOpen}
-                handleClose={() => { setDeleteModalOpen(false); setDeletingTransaction(null); }}
-                title="Excluir Transação"
-                confirmLabel="Excluir"
-                action={handleDeleteConfirm}
-                layout={
-                    <Typography sx={{ py: 1 }}>
-                        Tem certeza que deseja excluir <strong>{deletingTransaction?.description}</strong> no valor de{' '}
-                        <strong>R$ {deletingTransaction?.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>?
-                    </Typography>
-                }
-            />
+            <TransactionCrudDialogs crud={crud} />
         </div>
     )
 }

@@ -52,15 +52,15 @@ const Login = () => {
     return (
         
             <Grid size={6} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Card sx={{ p: 3, width: 400, backgroundColor: "#fdfdfd" ,margin: 'auto', borderRadius: 3, boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+                <Card sx={{ p: 3, width: 400, bgcolor: 'background.paper', margin: 'auto', borderRadius: 3, boxShadow: 2 }}>
                     <Typography variant="h4" align="center" gutterBottom>Login</Typography>
                     <FormControl sx={{width: '100%'}}>
                         <Grid container spacing={2} direction="column" alignItems="center">
                         {error && <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>}
                         {resendMessage && resendStatus && <Alert severity={resendStatus} sx={{ width: '100%' }}>{resendMessage}</Alert>}
-                        <TextField id="outlined-basic" name="email" label="Email" variant="outlined" sx={{ minWidth: '100%' }} value={email} onChange={(e) => setEmail(e.target.value)} />
+                        <TextField id="login-email" name="email" label="Email" variant="outlined" sx={{ minWidth: '100%' }} value={email} onChange={(e) => setEmail(e.target.value)} />
                         <PasswordField
-                            id="outlined-basic"
+                            id="login-password"
                             name="password"
                             label="Senha"
                             variant="outlined"
