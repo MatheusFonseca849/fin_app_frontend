@@ -47,17 +47,17 @@ const Register = () => {
 
     return (
             <Grid size={6} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Card sx={{ p: 3, width: 500, backgroundColor: "#fdfdfd" ,margin: 'auto', borderRadius: 3, boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+                <Card sx={{ p: 3, width: 500, bgcolor: 'background.paper', margin: 'auto', borderRadius: 3, boxShadow: 2 }}>
                     <Typography variant="h4" align="center" gutterBottom>Cadastre-se</Typography>
                     <FormControl sx={{width: '100%'}}>
                         <Grid container spacing={2} direction="column" alignItems="center">
                             {success && <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>}
                             {displayError && <Alert severity="error" sx={{ width: '100%' }}>{displayError}</Alert>}
-                            <TextField id="outlined-basic" name="name" label="Nome" variant="outlined" sx={{ minWidth: '100%' }} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                            <TextField id="outlined-basic" name="lastName" label="Sobrenome" variant="outlined" sx={{ minWidth: '100%' }} value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                        <TextField id="outlined-basic" name="email" label="Email" variant="outlined" sx={{ minWidth: '100%' }} value={email} onChange={(e) => setEmail(e.target.value)} />
+                            <TextField id="register-name" name="name" label="Nome" variant="outlined" sx={{ minWidth: '100%' }} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                            <TextField id="register-lastName" name="lastName" label="Sobrenome" variant="outlined" sx={{ minWidth: '100%' }} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                        <TextField id="register-email" name="email" label="Email" variant="outlined" sx={{ minWidth: '100%' }} value={email} onChange={(e) => setEmail(e.target.value)} />
                         <PasswordField
-                            id="outlined-basic"
+                            id="register-password"
                             name="password"
                             label="Senha"
                             variant="outlined"
@@ -66,7 +66,7 @@ const Register = () => {
                             onChange={(e) => setPassword(e.target.value)}
                         />
                         <PasswordField
-                            id="outlined-basic"
+                            id="register-confirmPassword"
                             name="confirmPassword"
                             label="Confirmar Senha"
                             variant="outlined"

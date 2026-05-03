@@ -59,7 +59,7 @@ const ResetPassword = () => {
 
     return (
         <Grid size={6} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Card sx={{ p: 3, width: 400, backgroundColor: "#fdfdfd", margin: 'auto', borderRadius: 3, boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+            <Card sx={{ p: 3, width: 400, bgcolor: 'background.paper', margin: 'auto', borderRadius: 3, boxShadow: 2 }}>
                 <Typography variant="h4" align="center" gutterBottom>Nova Senha</Typography>
                 <Typography variant="body2" align="center" sx={{ mb: 2, color: 'text.secondary' }}>
                     Digite sua nova senha abaixo.

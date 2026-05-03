@@ -86,7 +86,7 @@ const CategoriesPage = () => {
         } finally {
             setIsSaving(false)
         }
-    }, [editingCategory, formData, handleCloseModal, categories])
+    }, [editingCategory, formData, handleCloseModal])
 
     // --- Delete ---
     const handleOpenDelete = useCallback((id: string) => {
@@ -113,7 +113,7 @@ const CategoriesPage = () => {
         } finally {
             setIsDeleting(false)
         }
-    }, [deletingCategory, handleCloseDelete, categories])
+    }, [deletingCategory, handleCloseDelete])
 
     return (
         <Box>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Card, CircularProgress, Grid, IconButton, InputAdornment, List, ListItem, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
+import { Alert, Box, Card, CircularProgress, Grid, IconButton, InputAdornment, List, ListItem, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
 import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
@@ -30,15 +30,18 @@ const Dashboard = () => {
     const [isSavingBalance, setIsSavingBalance] = useState(false);
     const [chartMode, setChartMode] = useState<'pie' | 'bar'>('pie');
     const [ccChartMode, setCcChartMode] = useState<'pie' | 'bar'>('pie');
+    const [error, setError] = useState<string | null>(null);
 
     const crud = useTransactionCrud();
 
     const fetchDashboard = useCallback(async () => {
         try {
+            setError(null);
             const data = await transactionsApi.getDashboard();
             setDashboardData(data);
-        } catch (error) {
-            console.error('Failed to fetch dashboard data:', error);
+        } catch (err) {
+            console.error('Failed to fetch dashboard data:', err);
+            setError('Erro ao carregar dados do dashboard. Tente recarregar a página.');
         } finally {
             setIsLoading(false);
         }
@@ -114,6 +117,11 @@ const Dashboard = () => {
 
     return (
         <div>
+            {error && (
+                <Alert severity="error" sx={{ m: 2 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
             <Grid container direction="row">
                 {/* LEFT COLUMN */}
                 <Grid size={4}>

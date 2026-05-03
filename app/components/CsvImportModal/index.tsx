@@ -178,6 +178,7 @@ const CsvImportModal = ({ open, onClose, creditCardOnly = false }: CsvImportModa
   const [customKeywordCol, setCustomKeywordCol] = useState('');
   const [customDateFormat, setCustomDateFormat] = useState('DD/MM/YYYY');
   const [customValueSigned, setCustomValueSigned] = useState(true);
+  const [customSeparator, setCustomSeparator] = useState(',');
 
   // Transaction properties available for mapping
   const txPropertyOptions = [
@@ -240,6 +241,7 @@ const CsvImportModal = ({ open, onClose, creditCardOnly = false }: CsvImportModa
     setCustomKeywordCol('');
     setCustomDateFormat('DD/MM/YYYY');
     setCustomValueSigned(true);
+    setCustomSeparator(',');
     setPreviewRows([]);
     setPreviewErrors([]);
     setBankLabel(null);
@@ -273,6 +275,7 @@ const CsvImportModal = ({ open, onClose, creditCardOnly = false }: CsvImportModa
           keywordTarget: customKeywordCol || assignedDesc,
           dateFormat: customDateFormat,
           valueSigned: customValueSigned,
+          separator: customSeparator,
         };
       }
 
@@ -291,7 +294,7 @@ const CsvImportModal = ({ open, onClose, creditCardOnly = false }: CsvImportModa
     } finally {
       setIsLoadingPreview(false);
     }
-  }, [selectedFile, selectedBank, assignedDate, assignedValue, assignedDesc, customKeywordCol, customDateFormat, customValueSigned]);
+  }, [selectedFile, selectedBank, assignedDate, assignedValue, assignedDesc, customKeywordCol, customDateFormat, customValueSigned, customSeparator]);
 
   // Step 1 → Step 2 (custom) or Step 3 (bank preset)
   const handleNext = useCallback(async () => {
@@ -304,7 +307,9 @@ const CsvImportModal = ({ open, onClose, creditCardOnly = false }: CsvImportModa
       try {
         const text = await selectedFile.text();
         const firstLine = text.split('\n')[0];
-        const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const sep = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+        setCustomSeparator(sep);
+        const headers = firstLine.split(sep).map(h => h.trim().replace(/^"|"$/g, ''));
         setCsvHeaders(headers);
         setStep('mapping');
       } catch {
