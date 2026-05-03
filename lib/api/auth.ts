@@ -35,7 +35,7 @@ export interface User {
 export interface Category {
   _id: string;
   name: string;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
   color: string;
   keywords: string[];
 }
@@ -45,6 +45,8 @@ export interface UserPreferences {
   language: 'pt-BR' | 'en-US' | 'es-MX';
   currency: 'BRL' | 'USD' | 'MXN';
   allowForeignCurrency: boolean;
+  creditCardClosingDay: number;
+  creditCardDueDay: number;
 }
 
 export interface ResetPasswordData {

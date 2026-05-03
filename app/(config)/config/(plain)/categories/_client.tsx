@@ -24,12 +24,12 @@ const CategoriesPage = () => {
     const [isDeleting, setIsDeleting] = useState(false)
 
     const incomeCategories = useMemo(() =>
-        categories.filter(c => c.type === 'credito'),
+        categories.filter(c => c.type === 'income'),
         [categories]
     )
 
     const expenseCategories = useMemo(() =>
-        categories.filter(c => c.type === 'debito'),
+        categories.filter(c => c.type === 'expense'),
         [categories]
     )
 
@@ -86,7 +86,7 @@ const CategoriesPage = () => {
         } finally {
             setIsSaving(false)
         }
-    }, [editingCategory, formData, handleCloseModal, categories])
+    }, [editingCategory, formData, handleCloseModal])
 
     // --- Delete ---
     const handleOpenDelete = useCallback((id: string) => {
@@ -113,7 +113,7 @@ const CategoriesPage = () => {
         } finally {
             setIsDeleting(false)
         }
-    }, [deletingCategory, handleCloseDelete, categories])
+    }, [deletingCategory, handleCloseDelete])
 
     return (
         <Box>

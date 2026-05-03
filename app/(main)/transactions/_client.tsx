@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Box, Divider, Typography } from '@mui/material'
+import { Alert, Box, Divider, Typography } from '@mui/material'
 import TransactionsTable from '@/app/components/TransactionsTable'
 import type { ServerFilterValues } from '@/app/components/TransactionsTable'
 import { Transaction, TransactionsResponse } from '@/lib/api/transactions'
@@ -15,10 +15,12 @@ const TransactionsPage = () => {
     const [total, setTotal] = useState(0)
     const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
     const [filterParams, setFilterParams] = useState<ServerFilterValues>({})
+    const [error, setError] = useState<string | null>(null)
 
     const fetchTransactions = useCallback(async () => {
         try {
             setIsLoadingTransactions(true)
+            setError(null)
             const res: TransactionsResponse = await transactionsApi.getAll({
                 page: page + 1,
                 limit: rowsPerPage,
@@ -27,8 +29,9 @@ const TransactionsPage = () => {
             setTransactions(res.data)
             setTotalPages(res.pagination.pages)
             setTotal(res.pagination.total)
-        } catch (error) {
-            console.error('Failed to fetch transactions:', error)
+        } catch (err) {
+            console.error('Failed to fetch transactions:', err)
+            setError('Erro ao carregar transações. Tente novamente.')
         } finally {
             setIsLoadingTransactions(false)
         }
@@ -59,6 +62,11 @@ const TransactionsPage = () => {
     return (
         <Box>
             <Typography variant="h4" fontWeight={600} sx={{ margin: 2 }}>Transações</Typography>
+            {error && (
+                <Alert severity="error" sx={{ mx: 2, mb: 2 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
             <Divider sx={{ mb: 2 }} />
             <TransactionsTable
                 transactions={transactions}

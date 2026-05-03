@@ -1,10 +1,11 @@
 'use client'
 
-import { Box, Divider, MenuItem, Select, Switch, Typography } from "@mui/material"
-import { useEffect, useMemo, useState } from "react"
+import { Alert, Box, Button, CircularProgress, Divider, MenuItem, Select, Switch, TextField, Typography } from "@mui/material"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/lib/contexts/AuthContext"
 import { usePreferences } from "@/lib/contexts/PreferencesContext"
 import { useEditablePage } from "@/lib/contexts/EditablePageContext"
+import { transactionsApi } from "@/lib/api"
 import type { UserPreferences } from "@/lib/api"
 
 const SettingsPage = () => {
@@ -17,6 +18,26 @@ const SettingsPage = () => {
     const [language, setLanguage] = useState<UserPreferences['language']>('pt-BR');
     const [currency, setCurrency] = useState<UserPreferences['currency']>('BRL');
     const [allowForeignCurrency, setAllowForeignCurrency] = useState(false);
+    const [creditCardClosingDay, setCreditCardClosingDay] = useState(1);
+    const [creditCardDueDay, setCreditCardDueDay] = useState(1);
+    const [isRecompiling, setIsRecompiling] = useState(false);
+    const [recompileFeedback, setRecompileFeedback] = useState<{ message: string; severity: 'success' | 'info' | 'error' } | null>(null);
+
+    const handleRecompileFatura = useCallback(async () => {
+        setIsRecompiling(true);
+        setRecompileFeedback(null);
+        try {
+            const result = await transactionsApi.recompileFatura();
+            setRecompileFeedback({ message: result.message, severity: result.fatura ? 'success' : 'info' });
+            if (result.fatura) {
+                window.dispatchEvent(new Event('transaction-change'));
+            }
+        } catch {
+            setRecompileFeedback({ message: 'Erro ao recompilar fatura.', severity: 'error' });
+        } finally {
+            setIsRecompiling(false);
+        }
+    }, []);
 
     // Clear theme override on unmount (e.g. navigating away without save/cancel)
     useEffect(() => {
@@ -30,6 +51,8 @@ const SettingsPage = () => {
             setLanguage(user.preferences.language);
             setCurrency(user.preferences.currency);
             setAllowForeignCurrency(user.preferences.allowForeignCurrency);
+            setCreditCardClosingDay(user.preferences.creditCardClosingDay ?? 1);
+            setCreditCardDueDay(user.preferences.creditCardDueDay ?? 1);
         }
     }, [user]);
 
@@ -40,9 +63,11 @@ const SettingsPage = () => {
             darkMode !== user.preferences.darkMode ||
             language !== user.preferences.language ||
             currency !== user.preferences.currency ||
-            allowForeignCurrency !== user.preferences.allowForeignCurrency
+            allowForeignCurrency !== user.preferences.allowForeignCurrency ||
+            creditCardClosingDay !== (user.preferences.creditCardClosingDay ?? 1) ||
+            creditCardDueDay !== (user.preferences.creditCardDueDay ?? 1)
         );
-    }, [user, darkMode, language, currency, allowForeignCurrency]);
+    }, [user, darkMode, language, currency, allowForeignCurrency, creditCardClosingDay, creditCardDueDay]);
 
     // Sync isDirty to editable layout context
     useEffect(() => {
@@ -57,7 +82,7 @@ const SettingsPage = () => {
             setFeedback(null);
             try {
                 await updateUser({
-                    preferences: { darkMode, language, currency, allowForeignCurrency }
+                    preferences: { darkMode, language, currency, allowForeignCurrency, creditCardClosingDay, creditCardDueDay }
                 });
                 setThemeModeOverride(null);
                 setFeedback({ message: 'Configurações salvas com sucesso.', severity: 'success' });
@@ -75,10 +100,12 @@ const SettingsPage = () => {
             setLanguage(user.preferences.language);
             setCurrency(user.preferences.currency);
             setAllowForeignCurrency(user.preferences.allowForeignCurrency);
+            setCreditCardClosingDay(user.preferences.creditCardClosingDay ?? 1);
+            setCreditCardDueDay(user.preferences.creditCardDueDay ?? 1);
             setThemeModeOverride(null);
             setFeedback(null);
         });
-    }, [user, isDirty, darkMode, language, currency, allowForeignCurrency, updateUser, setThemeModeOverride, registerSave, registerCancel, setIsSaving, setFeedback]);
+    }, [user, isDirty, darkMode, language, currency, allowForeignCurrency, creditCardClosingDay, creditCardDueDay, updateUser, setThemeModeOverride, registerSave, registerCancel, setIsSaving, setFeedback]);
 
     if (!user) return null;
 
@@ -134,6 +161,55 @@ const SettingsPage = () => {
                         onChange={(e) => setAllowForeignCurrency(e.target.checked)}
                     />
                 </Box>
+
+                <Divider sx={{ my: 1 }} />
+                <Typography variant="h6" fontWeight={600}>Cartão de Crédito</Typography>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="body1">Dia de fechamento</Typography>
+                    <TextField
+                        type="number"
+                        value={creditCardClosingDay}
+                        onChange={(e) => {
+                            const val = Math.max(1, Math.min(31, Number(e.target.value) || 1));
+                            setCreditCardClosingDay(val);
+                        }}
+                        slotProps={{ htmlInput: { min: 1, max: 31 } }}
+                        sx={{ width: 100 }}
+                        size="small"
+                    />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="body1">Dia de vencimento</Typography>
+                    <TextField
+                        type="number"
+                        value={creditCardDueDay}
+                        onChange={(e) => {
+                            const val = Math.max(1, Math.min(31, Number(e.target.value) || 1));
+                            setCreditCardDueDay(val);
+                        }}
+                        slotProps={{ htmlInput: { min: 1, max: 31 } }}
+                        sx={{ width: 100 }}
+                        size="small"
+                    />
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={handleRecompileFatura}
+                        disabled={isRecompiling}
+                        startIcon={isRecompiling ? <CircularProgress size={16} /> : undefined}
+                    >
+                        {isRecompiling ? 'Recompilando...' : 'Recompilar Fatura'}
+                    </Button>
+                </Box>
+                {recompileFeedback && (
+                    <Alert severity={recompileFeedback.severity} sx={{ mt: 1 }} onClose={() => setRecompileFeedback(null)}>
+                        {recompileFeedback.message}
+                    </Alert>
+                )}
             </Box>
         </Box>
     )

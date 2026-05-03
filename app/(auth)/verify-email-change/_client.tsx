@@ -43,7 +43,7 @@ const VerifyEmailChange = () => {
 
     return (
         <Grid size={6} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Card sx={{ p: 3, width: 450, backgroundColor: "#fdfdfd", margin: 'auto', borderRadius: 3, boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', textAlign: 'center' }}>
+            <Card sx={{ p: 3, width: 450, bgcolor: 'background.paper', margin: 'auto', borderRadius: 3, boxShadow: 2, textAlign: 'center' }}>
                 <Typography variant="h4" align="center" gutterBottom>Confirmação de Email</Typography>
 
                 {status === 'loading' && (

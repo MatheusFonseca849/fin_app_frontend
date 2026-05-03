@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Card, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
+import { Alert, Box, Card, Grid, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material"
 import { useMemo, useState, useEffect, useCallback } from "react"
 import dynamic from 'next/dynamic'
 
@@ -36,6 +36,7 @@ const RANGE_MONTHS: Record<RangeKey, number | undefined> = {
 const HistoryPage = () => {
 
     const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const [range, setRange] = useState<RangeKey>('6m');
 
@@ -52,12 +53,14 @@ const HistoryPage = () => {
 
     const fetchChartData = useCallback(async () => {
         try {
-            const res = await transactionsApi.getMonthlySummary();
+            setError(null);
+            const res = await transactionsApi.getMonthlySummary(RANGE_MONTHS[range]);
             setChartData(res.data);
-        } catch (error) {
-            console.error('Failed to fetch monthly summary:', error);
+        } catch (err) {
+            console.error('Failed to fetch monthly summary:', err);
+            setError('Erro ao carregar dados do histórico.');
         }
-    }, []);
+    }, [range]);
 
     const fetchTransactions = useCallback(async () => {
         try {
@@ -70,8 +73,9 @@ const HistoryPage = () => {
             setTransactions(res.data);
             setTableTotalPages(res.pagination.pages);
             setTableTotal(res.pagination.total);
-        } catch (error) {
-            console.error('Failed to fetch transactions:', error);
+        } catch (err) {
+            console.error('Failed to fetch transactions:', err);
+            setError('Erro ao carregar transações.');
         } finally {
             setIsLoadingTransactions(false);
         }
@@ -86,25 +90,19 @@ const HistoryPage = () => {
         return () => window.removeEventListener('transaction-change', handler);
     }, [fetchChartData, fetchTransactions]);
 
-    const allFormattedChartData = useMemo(() =>
+    const formattedChartData = useMemo(() =>
         chartData.map(item => {
             const label = new Date(item.year, item.month - 1)
                 .toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
             return {
                 month: label,
-                despesas: Number((item.despesas / 100).toFixed(2)),
-                receitas: Number((item.receitas / 100).toFixed(2)),
-                saldo: Number((item.saldo / 100).toFixed(2)),
+                expenses: Number((item.expenses / 100).toFixed(2)),
+                income: Number((item.income / 100).toFixed(2)),
+                balance: Number((item.balance / 100).toFixed(2)),
             };
         }),
         [chartData]
     );
-
-    const filteredChartData = useMemo(() => {
-        const months = RANGE_MONTHS[range];
-        if (!months) return allFormattedChartData;
-        return allFormattedChartData.slice(-months);
-    }, [range, allFormattedChartData]);
 
     const handleTablePageChange = useCallback((newPage: number) => {
         setTablePage(newPage);
@@ -122,6 +120,11 @@ const HistoryPage = () => {
 
     return (
         <div>
+            {error && (
+                <Alert severity="error" sx={{ m: 2 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 2 }}>
                 <ToggleButtonGroup
                     value={range}
@@ -140,13 +143,13 @@ const HistoryPage = () => {
                 <Grid size={6} sx={{ p: 2 }} spacing={2}>
                     <Card sx={{ p: 2 }}>
                         <Typography variant="h4" sx={{ marginBottom: 2}}>Despesas x Receitas</Typography>
-                        <HistoryComposedChart data={filteredChartData} />
+                        <HistoryComposedChart data={formattedChartData} />
                     </Card>
                 </Grid>
                 <Grid size={6} sx={{ p: 2 }}>
                     <Card sx={{ p: 2 }}>
                         <Typography variant="h4" sx={{ marginBottom: 2}}>Histórico de Saldo</Typography>
-                        <HistoryAreaChart data={filteredChartData} />
+                        <HistoryAreaChart data={formattedChartData} />
                     </Card>
                 </Grid>
             </Grid>

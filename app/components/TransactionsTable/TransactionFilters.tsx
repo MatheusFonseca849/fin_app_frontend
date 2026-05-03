@@ -20,6 +20,7 @@ interface TransactionFiltersProps {
     categoryFilter: string
     recurrentOnly: boolean
     paidFilter: '' | 'true' | 'false'
+    paymentModeFilter: '' | 'debit' | 'credit'
     categories: { _id: string; name: string }[]
     onStartDateChange: (value: string) => void
     onEndDateChange: (value: string) => void
@@ -27,6 +28,7 @@ interface TransactionFiltersProps {
     onCategoryFilterChange: (value: string) => void
     onRecurrentOnlyChange: (value: boolean) => void
     onPaidFilterChange: (value: '' | 'true' | 'false') => void
+    onPaymentModeFilterChange: (value: '' | 'debit' | 'credit') => void
     // Bulk actions
     selectedCount: number
     bulkMenuAnchor: HTMLElement | null
@@ -43,6 +45,7 @@ const TransactionFilters = ({
     categoryFilter,
     recurrentOnly,
     paidFilter,
+    paymentModeFilter,
     categories,
     onStartDateChange,
     onEndDateChange,
@@ -50,6 +53,7 @@ const TransactionFilters = ({
     onCategoryFilterChange,
     onRecurrentOnlyChange,
     onPaidFilterChange,
+    onPaymentModeFilterChange,
     selectedCount,
     bulkMenuAnchor,
     onBulkMenuOpen,
@@ -121,6 +125,18 @@ const TransactionFilters = ({
                     <MenuItem value="">Todos</MenuItem>
                     <MenuItem value="true">Sim</MenuItem>
                     <MenuItem value="false">Não</MenuItem>
+                </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Método Pagamento</InputLabel>
+                <Select
+                    value={paymentModeFilter}
+                    label="Método Pagamento"
+                    onChange={(e) => onPaymentModeFilterChange(e.target.value as '' | 'debit' | 'credit')}
+                >
+                    <MenuItem value="">Todos</MenuItem>
+                    <MenuItem value="debit">Débito/Pix</MenuItem>
+                    <MenuItem value="credit">Cartão de Crédito</MenuItem>
                 </Select>
             </FormControl>
 

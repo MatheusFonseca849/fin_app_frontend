@@ -4,15 +4,18 @@ export interface TransactionCategory {
   _id: string;
   name: string;
   color: string;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
 }
+
+export type PaymentMode = 'debit' | 'credit' | null;
 
 export interface Transaction {
   _id: string;
   userId: string;
   description: string;
   value: number;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
+  paymentMode: PaymentMode;
   category: TransactionCategory;
   isRecurrent: boolean;
   billingDay?: number;
@@ -37,10 +40,11 @@ export interface TransactionsResponse {
 export interface TransactionFilters {
   page?: number;
   limit?: number;
-  type?: 'credito' | 'debito';
+  type?: 'income' | 'expense';
   category?: string;
   isRecurrent?: boolean;
   isPaid?: boolean;
+  paymentMode?: 'debit' | 'credit';
   startDate?: string;
   endDate?: string;
 }
@@ -48,15 +52,16 @@ export interface TransactionFilters {
 export interface MonthlySummaryItem {
   year: number;
   month: number;
-  despesas: number;
-  receitas: number;
-  saldo: number;
+  expenses: number;
+  income: number;
+  balance: number;
 }
 
 export interface CreateTransactionData {
   description: string;
   value: number;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
+  paymentMode?: 'debit' | 'credit';
   category: string;
   date: string;
   isRecurrent?: boolean;
@@ -67,7 +72,8 @@ export interface CreateTransactionData {
 export interface UpdateTransactionData {
   description?: string;
   value?: number;
-  type?: 'credito' | 'debito';
+  type?: 'income' | 'expense';
+  paymentMode?: PaymentMode;
   category?: string;
   date?: string;
   isRecurrent?: boolean;
@@ -88,6 +94,7 @@ export interface ImportResult {
 export interface BankOption {
   key: string;
   label: string;
+  creditCard: boolean;
 }
 
 export interface ImportPreviewRow {
@@ -95,7 +102,8 @@ export interface ImportPreviewRow {
   description: string;
   value: number;
   valueCents: number;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
+  paymentMode: 'debit' | 'credit' | null;
   categoryId: string;
   categoryName: string;
   date: string;
@@ -107,12 +115,16 @@ export interface ImportPreviewResponse {
   rows: ImportPreviewRow[];
   errors: string[];
   headers: string[];
+  creditCard: boolean;
+  bankLabel: string | null;
 }
 
 export interface ImportConfirmTransaction {
   description: string;
   value: number;
-  type: 'credito' | 'debito';
+  type: 'income' | 'expense';
+  paymentMode?: 'debit' | 'credit' | null;
+  source?: string | null;
   categoryId: string;
   date: string;
   isPaid: boolean;
@@ -131,11 +143,20 @@ export interface CustomMapping {
 }
 
 export interface DashboardData {
-  monthlyExpenses: number;
+  monthlyDebitExpenses: number;
+  monthlyCreditCardTotal: number;
+  monthlyExpensesTotal: number;
   monthlyIncome: number;
   monthlyBalance: number;
   expensesByCategory: { name: string; color: string; value: number }[];
+  creditCardByCategory: { name: string; color: string; value: number }[];
   upcomingExpenses: Transaction[];
+}
+
+export interface RecompileResult {
+  message: string;
+  fatura: Transaction | null;
+  deletedOldFatura: boolean;
 }
 
 export interface BulkActionResult {
@@ -148,7 +169,8 @@ export interface BulkActionResult {
 export interface BulkUpdateData {
   description?: string;
   value?: number;
-  type?: 'credito' | 'debito';
+  type?: 'income' | 'expense';
+  paymentMode?: PaymentMode;
   category?: string;
   date?: string;
   isPaid?: boolean;
@@ -165,6 +187,7 @@ export const transactionsApi = {
     if (filters?.category) params.category = filters.category;
     if (filters?.isRecurrent !== undefined) params.isRecurrent = String(filters.isRecurrent);
     if (filters?.isPaid !== undefined) params.isPaid = String(filters.isPaid);
+    if (filters?.paymentMode) params.paymentMode = filters.paymentMode;
     if (filters?.startDate) params.startDate = filters.startDate;
     if (filters?.endDate) params.endDate = filters.endDate;
 
@@ -241,6 +264,11 @@ export const transactionsApi = {
 
   bulkUpdate: async (ids: string[], updates: BulkUpdateData) => {
     const res = await api.post<BulkActionResult>('/records/bulk-update', { ids, updates });
+    return res.data;
+  },
+
+  recompileFatura: async () => {
+    const res = await api.post<RecompileResult>('/records/credit-card/recompile');
     return res.data;
   },
 };

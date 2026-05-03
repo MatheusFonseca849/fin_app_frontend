@@ -3,7 +3,7 @@
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface HistoryComposedChartProps {
-    data: { month: string; despesas: number; receitas: number; saldo: number }[];
+    data: { month: string; expenses: number; income: number; balance: number }[];
 }
 
 const HistoryComposedChart = ({ data }: HistoryComposedChartProps) => (
@@ -13,8 +13,8 @@ const HistoryComposedChart = ({ data }: HistoryComposedChartProps) => (
             <YAxis />
             <Tooltip formatter={(value: number | undefined) => value?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? ''} />
             <Legend />
-            <Bar dataKey="despesas" name="Despesas" fill="#fb6c1b" />
-            <Line type="monotone" dataKey="receitas" name="Receitas" stroke="#1fcf25" strokeWidth={2} />
+            <Bar dataKey="expenses" name="Despesas" fill="#fb6c1b" />
+            <Line type="monotone" dataKey="income" name="Receitas" stroke="#1fcf25" strokeWidth={2} />
         </ComposedChart>
     </ResponsiveContainer>
 )

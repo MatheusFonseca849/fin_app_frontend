@@ -44,6 +44,7 @@ export function useTransactionCrud({ onChanged }: UseTransactionCrudOptions = {}
             description: tx.description,
             value: (tx.value / 100).toFixed(2),
             type: tx.type,
+            paymentMode: tx.paymentMode || 'debit',
             category: tx.category?._id || '',
             date: tx.timestamp.split('T')[0],
             isPaid: tx.isPaid,

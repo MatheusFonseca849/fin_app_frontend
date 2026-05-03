@@ -43,6 +43,7 @@ type Step = 'select' | 'mapping' | 'preview';
 interface CsvImportModalProps {
   open: boolean;
   onClose: () => void;
+  creditCardOnly?: boolean;
 }
 
 const modalBoxSx = {
@@ -119,8 +120,8 @@ const PreviewRowRenderer = ({ index, style, rows, updateRow, updateRowCategory, 
           onChange={(e) => updateRow(index, 'type', e.target.value)}
           fullWidth
         >
-          <MenuItem value="debito">Despesa</MenuItem>
-          <MenuItem value="credito">Receita</MenuItem>
+          <MenuItem value="expense">Despesa</MenuItem>
+          <MenuItem value="income">Receita</MenuItem>
         </Select>
       </Box>
       <Box sx={{ width: 170, flexShrink: 0 }}>
@@ -156,7 +157,7 @@ const PreviewRowRenderer = ({ index, style, rows, updateRow, updateRowCategory, 
   );
 };
 
-const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
+const CsvImportModal = ({ open, onClose, creditCardOnly = false }: CsvImportModalProps) => {
   const { patchUser } = useAuth();
   const { categories: allCategories } = useCategories();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -177,6 +178,7 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
   const [customKeywordCol, setCustomKeywordCol] = useState('');
   const [customDateFormat, setCustomDateFormat] = useState('DD/MM/YYYY');
   const [customValueSigned, setCustomValueSigned] = useState(true);
+  const [customSeparator, setCustomSeparator] = useState(',');
 
   // Transaction properties available for mapping
   const txPropertyOptions = [
@@ -198,6 +200,9 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
   const [previewErrors, setPreviewErrors] = useState<string[]>([]);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
+  // Bank label (from preview response, used as source for CC transactions)
+  const [bankLabel, setBankLabel] = useState<string | null>(null);
+
   // Confirm
   const [isConfirming, setIsConfirming] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -213,10 +218,17 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
     if (!open) return;
     setIsLoadingBanks(true);
     transactionsApi.getBankOptions()
-      .then(setBankOptions)
+      .then(options => {
+        const filtered = creditCardOnly
+          ? options.filter(o => o.creditCard)
+          : options;
+        setBankOptions(filtered);
+        // Auto-select if only one option
+        if (filtered.length === 1) setSelectedBank(filtered[0].key);
+      })
       .catch(() => setError('Erro ao carregar opções de banco'))
       .finally(() => setIsLoadingBanks(false));
-  }, [open]);
+  }, [open, creditCardOnly]);
 
   // Reset state on close
   const handleClose = useCallback(() => {
@@ -229,8 +241,10 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
     setCustomKeywordCol('');
     setCustomDateFormat('DD/MM/YYYY');
     setCustomValueSigned(true);
+    setCustomSeparator(',');
     setPreviewRows([]);
     setPreviewErrors([]);
+    setBankLabel(null);
     setResult(null);
     setError(null);
     onClose();
@@ -261,10 +275,11 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
           keywordTarget: customKeywordCol || assignedDesc,
           dateFormat: customDateFormat,
           valueSigned: customValueSigned,
+          separator: customSeparator,
         };
       }
 
-      const { rows, errors } = await transactionsApi.importPreview(
+      const { rows, errors, bankLabel: label } = await transactionsApi.importPreview(
         selectedFile,
         selectedBank,
         customMapping,
@@ -272,13 +287,14 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
 
       setPreviewRows(rows);
       setPreviewErrors(errors);
+      setBankLabel(label ?? null);
       setStep('preview');
     } catch (err: unknown) {
       setError(extractErrorMessage(err, 'Erro ao processar CSV'));
     } finally {
       setIsLoadingPreview(false);
     }
-  }, [selectedFile, selectedBank, assignedDate, assignedValue, assignedDesc, customKeywordCol, customDateFormat, customValueSigned]);
+  }, [selectedFile, selectedBank, assignedDate, assignedValue, assignedDesc, customKeywordCol, customDateFormat, customValueSigned, customSeparator]);
 
   // Step 1 → Step 2 (custom) or Step 3 (bank preset)
   const handleNext = useCallback(async () => {
@@ -291,7 +307,9 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
       try {
         const text = await selectedFile.text();
         const firstLine = text.split('\n')[0];
-        const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+        const sep = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+        setCustomSeparator(sep);
+        const headers = firstLine.split(sep).map(h => h.trim().replace(/^"|"$/g, ''));
         setCsvHeaders(headers);
         setStep('mapping');
       } catch {
@@ -379,6 +397,8 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
         description: row.description,
         value: row.value,
         type: row.type,
+        paymentMode: row.paymentMode,
+        source: row.paymentMode === 'credit' && bankLabel ? bankLabel : undefined,
         categoryId: row.categoryId,
         date: row.timestamp,
         isPaid: row.isPaid,
@@ -401,11 +421,12 @@ const CsvImportModal = ({ open, onClose }: CsvImportModalProps) => {
   }, [previewRows, patchUser]);
 
   // Render step title
+  const baseTitle = creditCardOnly ? 'Importar Fatura' : 'Importar Extrato';
   const stepTitle = step === 'select'
-    ? 'Importar Extrato — Selecionar Banco'
+    ? `${baseTitle} — Selecionar Banco`
     : step === 'mapping'
-      ? 'Importar Extrato — Mapeamento Customizado'
-      : 'Importar Extrato — Revisão';
+      ? `${baseTitle} — Mapeamento Customizado`
+      : `${baseTitle} — Revisão`;
 
   return (
     <Modal open={open} onClose={handleClose}>
