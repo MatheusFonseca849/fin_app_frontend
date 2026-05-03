@@ -28,8 +28,8 @@ const SettingsPage = () => {
         setRecompileFeedback(null);
         try {
             const result = await transactionsApi.recompileFatura();
-            setRecompileFeedback({ message: result.message, severity: result.fatura ? 'success' : 'info' });
-            if (result.fatura) {
+            setRecompileFeedback({ message: result.message, severity: result.faturas ? 'success' : 'info' });
+            if (result.faturas) {
                 window.dispatchEvent(new Event('transaction-change'));
             }
         } catch {

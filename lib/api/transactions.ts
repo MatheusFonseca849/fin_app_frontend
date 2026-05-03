@@ -151,12 +151,15 @@ export interface DashboardData {
   expensesByCategory: { name: string; color: string; value: number }[];
   creditCardByCategory: { name: string; color: string; value: number }[];
   upcomingExpenses: Transaction[];
+  pendingExpensesTotal: number;
+  pendingExpensesCount: number;
+  monthlyRecurringExpenses: number;
 }
 
 export interface RecompileResult {
   message: string;
-  fatura: Transaction | null;
-  deletedOldFatura: boolean;
+  faturas: Transaction[] | null;
+  deletedCount: number;
 }
 
 export interface BulkActionResult {
