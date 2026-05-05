@@ -52,7 +52,19 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    // Backend unreachable (network error, no response at all) — clear auth state
+    // so protected routes redirect to login. Skip for refresh/login endpoints
+    // which handle their own errors in AuthContext.initAuth.
+    if (!error.response) {
+      const url = originalRequest?.url ?? '';
+      if (!url.includes('/users/refresh') && !url.includes('/users/login')) {
+        setAccessToken(null);
+        onAuthFailure?.();
+      }
+      return Promise.reject(error);
+    }
+
+    if (error.response.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
 

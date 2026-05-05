@@ -1,23 +1,27 @@
 'use client'
 
-import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
-interface HistoryComposedChartProps {
-    data: { month: string; year: number; monthNum: number; expenses: number; creditCardTotal: number; income: number; balance: number }[];
+interface ChartDataItem {
+    month: string;
+    creditCardTotal: number;
+}
+
+interface HistoryCCBarChartProps {
+    data: ChartDataItem[];
     selectedMonths?: Set<string>;
     onBarClick?: (month: string) => void;
 }
 
-const HistoryComposedChart = ({ data, selectedMonths, onBarClick }: HistoryComposedChartProps) => (
+const HistoryCCBarChart = ({ data, selectedMonths, onBarClick }: HistoryCCBarChartProps) => (
     <ResponsiveContainer width="100%" height={350}>
-        <ComposedChart data={data}>
+        <BarChart data={data}>
             <XAxis dataKey="month" />
             <YAxis />
             <Tooltip formatter={(value: number | undefined) => value?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? ''} />
-            <Legend />
             <Bar
-                dataKey="expenses"
-                name="Despesas"
+                dataKey="creditCardTotal"
+                name="Cartão de Crédito"
                 fill="#fb6c1b"
                 cursor="pointer"
                 onClick={(_, index) => onBarClick?.(data[index].month)}
@@ -31,9 +35,8 @@ const HistoryComposedChart = ({ data, selectedMonths, onBarClick }: HistoryCompo
                     />
                 ))}
             </Bar>
-            <Line type="monotone" dataKey="income" name="Receitas" stroke="#1fcf25" strokeWidth={2} />
-        </ComposedChart>
+        </BarChart>
     </ResponsiveContainer>
 )
 
-export default HistoryComposedChart
+export default HistoryCCBarChart
