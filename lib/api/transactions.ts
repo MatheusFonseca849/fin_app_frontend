@@ -53,6 +53,7 @@ export interface MonthlySummaryItem {
   year: number;
   month: number;
   expenses: number;
+  creditCardTotal: number;
   income: number;
   balance: number;
 }
